@@ -1,0 +1,12 @@
+{
+  "name": "tubesummarizer-scripts",
+  "version": "1.0.0",
+  "description": "Utility scripts for TubeSummarizer AI Browser Extension",
+  "main": "generate-icons.js",
+  "scripts": {
+    "generate-icons": "node generate-icons.js"
+  },
+  "dependencies": {
+    "sharp": "^0.33.2"
+  }
+}

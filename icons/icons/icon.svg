@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#FF0000"/>
+  
+  <!-- Play Button Triangle (YouTube-like) -->
+  <path d="M200 160L360 256L200 352V160Z" fill="white"/>
+  
+  <!-- Text Bubble -->
+  <path d="M380 140C380 129 371 120 360 120H120C109 120 100 129 100 140V260C100 271 109 280 120 280H340L380 320V140Z" fill="white"/>
+  
+  <!-- Text Lines -->
+  <rect x="120" y="150" width="220" height="15" rx="5" fill="#FF0000"/>
+  <rect x="120" y="180" width="180" height="15" rx="5" fill="#FF0000"/>
+  <rect x="120" y="210" width="200" height="15" rx="5" fill="#FF0000"/>
+  <rect x="120" y="240" width="160" height="15" rx="5" fill="#FF0000"/>
+  
+  <!-- Highlight Effect -->
+  <rect x="120" y="210" width="60" height="15" rx="5" fill="#FFCC00"/>
+</svg>
