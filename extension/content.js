@@ -1,302 +1,479 @@
+/**
+ * YouTube Video Summarizer + Read Aloud Sidebar Extension
+ * Content Script
+ */
+
 // Global variables
-let sidebar = null;
-let videoId = null;
-let videoTitle = null;
-let transcript = null;
-let summary = null;
+let currentVideoId = null;
+let sidebarInjected = false;
+let observingUrlChanges = false;
+const BACKEND_URL = "http://localhost:3000";
 
-// Initialize when the page loads
-window.addEventListener('load', init);
-// Re-initialize when navigating to a new video
-window.addEventListener('yt-navigate-finish', init);
-
-// Initialize the extension
+/**
+ * Initialize the extension on YouTube pages
+ */
 function init() {
-  // Check if we're on a YouTube video page
-  if (!isVideoPage()) return;
-  
-  // Get video ID and title
-  videoId = getVideoId();
-  videoTitle = getVideoTitle();
-  
-  // Create sidebar if it doesn't exist
-  if (!sidebar) {
-    createSidebar();
-  }
-  
-  // Get video transcript
-  getTranscript()
-    .then(result => {
-      transcript = result;
-      // Show loading state in sidebar
-      updateSidebarContent('Loading summary...');
-      
-      // Send transcript to background script for summarization
-      chrome.runtime.sendMessage({
-        action: 'summarize',
-        videoId: videoId,
-        transcript: transcript,
-        title: videoTitle
-      }, response => {
-        if (response && response.success) {
-          summary = response.summary;
-          // Update sidebar with summary
-          updateSidebarContent(summary);
-        } else {
-          // Show error in sidebar
-          updateSidebarContent('Error generating summary. Please try again.');
+    // Start observing URL changes
+    if (!observingUrlChanges) {
+        observeUrlChanges();
+    }
+
+    // Check if we're on a YouTube video page
+    const videoId = getVideoIdFromUrl();
+    if (videoId) {
+        currentVideoId = videoId;
+        injectSidebarIfNeeded();
+        processSummarization(videoId);
+    }
+}
+
+/**
+ * Observe URL changes to detect navigation to different videos
+ */
+function observeUrlChanges() {
+    let lastUrl = location.href;
+
+    // Create a new observer
+    const observer = new MutationObserver(() => {
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            // URL changed, check if it's a video page
+            const videoId = getVideoIdFromUrl();
+            if (videoId && videoId !== currentVideoId) {
+                currentVideoId = videoId;
+                injectSidebarIfNeeded();
+                processSummarization(videoId);
+            }
         }
-      });
-    })
-    .catch(error => {
-      console.error('Error getting transcript:', error);
-      updateSidebarContent('Error getting transcript. Please try again.');
+    });
+
+    // Start observing
+    observer.observe(document, { subtree: true, childList: true });
+    observingUrlChanges = true;
+}
+
+/**
+ * Extract video ID from URL
+ */
+function getVideoIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("v");
+}
+
+/**
+ * Inject the sidebar if not already present
+ */
+function injectSidebarIfNeeded() {
+    if (!sidebarInjected) {
+        // Create iframe for sidebar
+        const iframe = document.createElement("iframe");
+        iframe.id = "youtube-summarizer-sidebar";
+        iframe.src = chrome.runtime.getURL("sidebar.html");
+        iframe.style.cssText = `
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 320px;
+      height: 100%;
+      border: none;
+      z-index: 9999;
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      background-color: white;
+    `;
+
+        // Add it to the page
+        document.body.appendChild(iframe);
+        sidebarInjected = true;
+
+        // Add resize handle
+        addResizeHandle();
+
+        // Setup communication with sidebar
+        setupSidebarCommunication();
+    }
+}
+
+/**
+ * Add resize handle to adjust sidebar width
+ */
+function addResizeHandle() {
+    const handle = document.createElement("div");
+    handle.id = "youtube-summarizer-resize-handle";
+    handle.style.cssText = `
+    position: fixed;
+    top: 0;
+    right: 320px;
+    width: 5px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 10000;
+  `;
+
+    document.body.appendChild(handle);
+
+    // Add drag functionality
+    let startX, startWidth;
+
+    handle.addEventListener("mousedown", (e) => {
+        startX = e.clientX;
+        const sidebar = document.getElementById("youtube-summarizer-sidebar");
+        startWidth = parseInt(sidebar.style.width, 10);
+
+        document.addEventListener("mousemove", handleDrag);
+        document.addEventListener("mouseup", stopDrag);
+    });
+
+    function handleDrag(e) {
+        const sidebar = document.getElementById("youtube-summarizer-sidebar");
+        const handle = document.getElementById(
+            "youtube-summarizer-resize-handle"
+        );
+        const newWidth = startWidth - (e.clientX - startX);
+
+        // Set min and max width
+        const finalWidth = Math.max(250, Math.min(600, newWidth));
+        sidebar.style.width = finalWidth + "px";
+        handle.style.right = finalWidth + "px";
+    }
+
+    function stopDrag() {
+        document.removeEventListener("mousemove", handleDrag);
+        document.removeEventListener("mouseup", stopDrag);
+    }
+}
+
+/**
+ * Set up communication with the sidebar iframe
+ */
+function setupSidebarCommunication() {
+    window.addEventListener("message", (event) => {
+        if (event.data.type === "SIDEBAR_READY") {
+            // Send the current video ID to the sidebar
+            const videoDetails = getVideoDetails();
+            const iframe = document.getElementById(
+                "youtube-summarizer-sidebar"
+            );
+
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage(
+                    {
+                        type: "VIDEO_DETAILS",
+                        data: videoDetails,
+                    },
+                    "*"
+                );
+            }
+        } else if (event.data.type === "CLOSE_SIDEBAR") {
+            // Handle close button click
+            const sidebar = document.getElementById(
+                "youtube-summarizer-sidebar"
+            );
+            const handle = document.getElementById(
+                "youtube-summarizer-resize-handle"
+            );
+
+            if (sidebar) {
+                sidebar.remove();
+                sidebarInjected = false;
+            }
+
+            if (handle) {
+                handle.remove();
+            }
+        }
     });
 }
 
-// Check if we're on a YouTube video page
-function isVideoPage() {
-  return window.location.pathname === '/watch';
-}
+/**
+ * Get video details (title, author, videoId)
+ */
+function getVideoDetails() {
+    // Get video ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoId = urlParams.get("v");
 
-// Get video ID from URL
-function getVideoId() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('v');
-}
+    // Get video title - try multiple selectors to handle YouTube's DOM structure
+    let title = "Unknown Title";
+    const titleSelectors = [
+        "h1.title",
+        "h1.ytd-watch-metadata",
+        "#title h1",
+        "#title",
+        "ytd-watch-metadata h1",
+        "h1.style-scope.ytd-watch-metadata",
+    ];
 
-// Get video title
-function getVideoTitle() {
-  return document.querySelector('.title.style-scope.ytd-video-primary-info-renderer')?.textContent || '';
-}
-
-// Get video transcript
-async function getTranscript() {
-  try {
-    // First, find the transcript URL
-    const videoId = getVideoId();
-    
-    // Get the available caption tracks
-    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
-    const html = await response.text();
-    
-    // Extract the captionTracks from the response
-    const captionTracksMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
-    if (!captionTracksMatch) {
-      throw new Error('No caption tracks found');
+    for (const selector of titleSelectors) {
+        const titleElement = document.querySelector(selector);
+        if (titleElement && titleElement.textContent.trim()) {
+            title = titleElement.textContent.trim();
+            break;
+        }
     }
-    
-    const captionTracks = JSON.parse(captionTracksMatch[1].replace(/\\"/g, '"'));
-    
-    // Find the English caption track, or use the first one if English is not available
-    const englishTrack = captionTracks.find(track => track.languageCode === 'en') || captionTracks[0];
-    if (!englishTrack) {
-      throw new Error('No caption track found');
+
+    // Get video author
+    let author = "Unknown Author";
+    const authorSelectors = [
+        "#owner-name a",
+        "#channel-name",
+        "#owner #channel-name",
+        "ytd-channel-name",
+        "ytd-video-owner-renderer #channel-name",
+    ];
+
+    for (const selector of authorSelectors) {
+        const authorElement = document.querySelector(selector);
+        if (authorElement && authorElement.textContent.trim()) {
+            author = authorElement.textContent.trim();
+            break;
+        }
     }
-    
-    // Get the transcript from the caption track URL
-    const transcriptResponse = await fetch(englishTrack.baseUrl);
-    const transcriptXml = await transcriptResponse.text();
-    
-    // Parse the XML response
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(transcriptXml, 'text/xml');
-    const textElements = xmlDoc.getElementsByTagName('text');
-    
-    // Extract the transcript text with timestamps
-    let transcriptText = '';
-    for (let i = 0; i < textElements.length; i++) {
-      const text = textElements[i].textContent;
-      transcriptText += text + ' ';
+
+    return {
+        videoId,
+        title,
+        author,
+    };
+}
+
+/**
+ * Get transcript data from YouTube's ytInitialPlayerResponse
+ */
+async function getTranscriptData() {
+    // Try to get the data from the window object
+    if (
+        window.ytInitialPlayerResponse &&
+        window.ytInitialPlayerResponse.captions &&
+        window.ytInitialPlayerResponse.captions.playerCaptionsTracklistRenderer
+    ) {
+        return {
+            captionTracks:
+                window.ytInitialPlayerResponse.captions
+                    .playerCaptionsTracklistRenderer.captionTracks,
+        };
     }
-    
-    return transcriptText.trim();
-  } catch (error) {
-    console.error('Error getting transcript:', error);
-    throw error;
-  }
-}
 
-// Create sidebar
-function createSidebar() {
-  // Create sidebar element
-  sidebar = document.createElement('div');
-  sidebar.id = 'yt-summarizer-sidebar';
-  sidebar.className = 'yt-summarizer-sidebar';
-  
-  // Create sidebar header
-  const header = document.createElement('div');
-  header.className = 'yt-summarizer-header';
-  
-  // Create logo
-  const logo = document.createElement('img');
-  logo.src = chrome.runtime.getURL('icons/logo.png');
-  logo.alt = 'Logo';
-  logo.className = 'yt-summarizer-logo';
-  
-  // Create title
-  const title = document.createElement('h2');
-  title.textContent = 'Video Summary';
-  title.className = 'yt-summarizer-title';
-  
-  // Create close button
-  const closeButton = document.createElement('button');
-  closeButton.textContent = '×';
-  closeButton.className = 'yt-summarizer-close';
-  closeButton.addEventListener('click', toggleSidebar);
-  
-  // Add elements to header
-  header.appendChild(logo);
-  header.appendChild(title);
-  header.appendChild(closeButton);
-  
-  // Create content container
-  const content = document.createElement('div');
-  content.className = 'yt-summarizer-content';
-  content.textContent = 'Loading...';
-  
-  // Create TTS controls
-  const ttsControls = document.createElement('div');
-  ttsControls.className = 'yt-summarizer-tts-controls';
-  
-  // Create play button
-  const playButton = document.createElement('button');
-  playButton.textContent = '▶️ Read Aloud';
-  playButton.className = 'yt-summarizer-play';
-  playButton.addEventListener('click', () => {
-    // Load TTS script if not already loaded
-    if (!window.YTSummarizer) {
-      const script = document.createElement('script');
-      script.src = chrome.runtime.getURL('tts.js');
-      document.body.appendChild(script);
-      script.onload = () => {
-        window.YTSummarizer.startTTS(summary);
-      };
-    } else {
-      window.YTSummarizer.startTTS(summary);
+    // If not found in window object, try to extract from script tags
+    for (const script of document.querySelectorAll("script")) {
+        const text = script.textContent;
+        if (text && text.includes("ytInitialPlayerResponse")) {
+            try {
+                const jsonStr = text
+                    .split("ytInitialPlayerResponse = ")[1]
+                    .split(";var")[0];
+                const data = JSON.parse(jsonStr);
+
+                if (
+                    data.captions &&
+                    data.captions.playerCaptionsTracklistRenderer
+                ) {
+                    return {
+                        captionTracks:
+                            data.captions.playerCaptionsTracklistRenderer
+                                .captionTracks,
+                    };
+                }
+            } catch (error) {
+                console.error("Error parsing script content:", error);
+            }
+        }
     }
-  });
-  
-  // Create pause button
-  const pauseButton = document.createElement('button');
-  pauseButton.textContent = '⏸️ Pause';
-  pauseButton.className = 'yt-summarizer-pause';
-  pauseButton.addEventListener('click', () => {
-    if (window.YTSummarizer) {
-      window.YTSummarizer.pauseTTS();
+
+    throw new Error("Could not find transcript data");
+}
+
+/**
+ * Get available transcript languages for a YouTube video
+ */
+async function getTranscriptLanguages() {
+    try {
+        // Get the transcript data from YouTube's ytInitialPlayerResponse
+        const transcriptData = await getTranscriptData();
+
+        if (!transcriptData || !transcriptData.captionTracks) {
+            throw new Error("No transcript data found");
+        }
+
+        // Extract language info
+        return transcriptData.captionTracks.map((track) => ({
+            code: track.languageCode,
+            name: track.name.simpleText,
+            url: track.baseUrl,
+        }));
+    } catch (error) {
+        console.error("Error getting transcript languages:", error);
+        throw error;
     }
-  });
-  
-  // Create stop button
-  const stopButton = document.createElement('button');
-  stopButton.textContent = '⏹️ Stop';
-  stopButton.className = 'yt-summarizer-stop';
-  stopButton.addEventListener('click', () => {
-    if (window.YTSummarizer) {
-      window.YTSummarizer.stopTTS();
+}
+
+/**
+ * Get transcript for a specific language
+ */
+async function getTranscript(url) {
+    try {
+        const response = await fetch(url);
+
+        if (response.status !== 200) {
+            throw new Error(
+                `Bad response fetching transcript: ${response.status}`
+            );
+        }
+
+        const text = await response.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "text/xml");
+        const textElements = xml.getElementsByTagName("text");
+
+        if (textElements.length === 0) {
+            return [];
+        }
+
+        const transcript = [
+            {
+                timestamp: parseInt(textElements[0].getAttribute("start")),
+                text: "",
+            },
+        ];
+
+        let sentenceCount = 0;
+
+        for (const element of textElements) {
+            const text = element.textContent.replace(/\r?\n|\r/g, " ").trim();
+            const timestamp = parseInt(element.getAttribute("start"));
+            const lastSegment = transcript[transcript.length - 1];
+            const textLength = lastSegment.text.length;
+            const wordCount = lastSegment.text.split(" ").length;
+
+            if (textLength >= 500 || wordCount >= 100 || sentenceCount >= 3) {
+                transcript.push({
+                    timestamp,
+                    text,
+                });
+                sentenceCount = 0;
+                continue;
+            }
+
+            lastSegment.text += " " + text;
+
+            if (text[text.length - 1] === ".") {
+                sentenceCount++;
+            }
+        }
+
+        // Clean up HTML entities
+        for (const segment of transcript) {
+            segment.text =
+                new DOMParser().parseFromString(segment.text, "text/html")
+                    .documentElement.textContent || "";
+        }
+
+        return transcript;
+    } catch (error) {
+        console.error("Error getting transcript:", error);
+        throw error;
     }
-  });
-  
-  // Create settings button
-  const settingsButton = document.createElement('button');
-  settingsButton.textContent = '⚙️';
-  settingsButton.className = 'yt-summarizer-settings';
-  settingsButton.addEventListener('click', openSettings);
-  
-  // Add buttons to TTS controls
-  ttsControls.appendChild(playButton);
-  ttsControls.appendChild(pauseButton);
-  ttsControls.appendChild(stopButton);
-  ttsControls.appendChild(settingsButton);
-  
-  // Add elements to sidebar
-  sidebar.appendChild(header);
-  sidebar.appendChild(content);
-  sidebar.appendChild(ttsControls);
-  
-  // Add sidebar to page
-  document.body.appendChild(sidebar);
-  
-  // Make sidebar resizable and draggable
-  makeResizable(sidebar);
-  makeDraggable(sidebar, header);
 }
 
-// Update sidebar content
-function updateSidebarContent(text) {
-  const content = sidebar.querySelector('.yt-summarizer-content');
-  content.textContent = text;
+/**
+ * Process summarization for the current video
+ */
+async function processSummarization(videoId) {
+    try {
+        // Get video details
+        const videoDetails = getVideoDetails();
+
+        // Get transcript languages
+        const languages = await getTranscriptLanguages();
+
+        if (!languages || languages.length === 0) {
+            sendSummaryToSidebar({
+                error: "No transcript available for this video",
+            });
+            return;
+        }
+
+        // Use the first available language (usually English if available)
+        const preferredLangCodes = ["en", "en-US", "en-GB"];
+        let selectedLanguage = languages[0]; // Default to first language
+
+        // Try to find a preferred language
+        for (const code of preferredLangCodes) {
+            const language = languages.find((lang) =>
+                lang.code.startsWith(code)
+            );
+            if (language) {
+                selectedLanguage = language;
+                break;
+            }
+        }
+
+        // Get the transcript
+        const transcript = await getTranscript(selectedLanguage.url);
+
+        if (!transcript || transcript.length === 0) {
+            sendSummaryToSidebar({
+                error: "Failed to extract transcript",
+            });
+            return;
+        }
+
+        // Combine transcript segments into a single text
+        const transcriptText = transcript
+            .map((segment) => segment.text)
+            .join(" ");
+
+        // Send to background script for API request
+        chrome.runtime.sendMessage(
+            {
+                type: "SUMMARIZE_VIDEO",
+                data: {
+                    videoId: videoId,
+                    title: videoDetails.title,
+                    transcript: transcriptText,
+                },
+            },
+            (response) => {
+                if (response && response.summary) {
+                    sendSummaryToSidebar({
+                        summary: response.summary,
+                        title: videoDetails.title,
+                        author: videoDetails.author,
+                    });
+                } else if (response && response.error) {
+                    sendSummaryToSidebar({
+                        error: response.error,
+                    });
+                }
+            }
+        );
+    } catch (error) {
+        console.error("Error in processing summarization:", error);
+        sendSummaryToSidebar({
+            error: "Failed to generate summary: " + error.message,
+        });
+    }
 }
 
-// Toggle sidebar visibility
-function toggleSidebar() {
-  if (sidebar) {
-    sidebar.classList.toggle('yt-summarizer-sidebar-hidden');
-  }
+/**
+ * Send summary to sidebar iframe
+ */
+function sendSummaryToSidebar(data) {
+    const iframe = document.getElementById("youtube-summarizer-sidebar");
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(
+            {
+                type: "SUMMARY_RESULT",
+                data: data,
+            },
+            "*"
+        );
+    }
 }
 
-// Make an element resizable
-function makeResizable(element) {
-  const resizer = document.createElement('div');
-  resizer.className = 'yt-summarizer-resizer';
-  element.appendChild(resizer);
-  
-  resizer.addEventListener('mousedown', initResize);
-  
-  function initResize(e) {
-    e.preventDefault();
-    window.addEventListener('mousemove', resize);
-    window.addEventListener('mouseup', stopResize);
-  }
-  
-  function resize(e) {
-    element.style.width = (e.clientX - element.getBoundingClientRect().left) + 'px';
-  }
-  
-  function stopResize() {
-    window.removeEventListener('mousemove', resize);
-    window.removeEventListener('mouseup', stopResize);
-  }
+// Initialize when DOM is loaded
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+} else {
+    init();
 }
-
-// Make an element draggable by its handle
-function makeDraggable(element, handle) {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  
-  handle.addEventListener('mousedown', dragMouseDown);
-  
-  function dragMouseDown(e) {
-    e.preventDefault();
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    document.addEventListener('mouseup', closeDragElement);
-    document.addEventListener('mousemove', elementDrag);
-  }
-  
-  function elementDrag(e) {
-    e.preventDefault();
-    pos1 = pos3 - e.clientX;
-    pos2 = pos4 - e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    element.style.top = (element.offsetTop - pos2) + 'px';
-    element.style.left = (element.offsetLeft - pos1) + 'px';
-  }
-  
-  function closeDragElement() {
-    document.removeEventListener('mouseup', closeDragElement);
-    document.removeEventListener('mousemove', elementDrag);
-  }
-}
-
-// Open settings page
-function openSettings() {
-  chrome.runtime.openOptionsPage();
-}
-
-// Listen for messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'toggleSidebar') {
-    toggleSidebar();
-  }
-});

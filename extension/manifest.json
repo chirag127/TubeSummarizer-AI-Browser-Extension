@@ -1,38 +1,56 @@
 {
-  "manifest_version": 3,
-  "name": "YouTube Video Summarizer + Read Aloud Sidebar",
-  "version": "1.0.0",
-  "description": "Automatically summarizes YouTube videos and displays the summary in a sidebar with read-aloud functionality.",
-  "permissions": ["activeTab", "storage", "scripting"],
-  "host_permissions": ["https://www.youtube.com/*"],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
-    }
-  ],
-  "action": {
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+    "manifest_version": 3,
+    "name": "YouTube Video Summarizer + Read Aloud",
+    "version": "1.0.0",
+    "description": "Automatically summarizes YouTube videos and provides a read aloud feature with word highlighting",
+    "permissions": [
+        "storage",
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://www.youtube.com/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://www.youtube.com/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "css": [
+                "sidebar.css"
+            ]
+        }
+    ],
+    "background": {
+        "service_worker": "background.js"
     },
-    "default_title": "YouTube Video Summarizer"
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
-  "options_page": "options.html",
-  "web_accessible_resources": [
-    {
-      "resources": ["sidebar.js", "tts.js", "icons/logo.png"],
-      "matches": ["https://www.youtube.com/*"]
-    }
-  ]
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "sidebar.html",
+                "sidebar.js",
+                "sidebar.css",
+                "icons/*"
+            ],
+            "matches": [
+                "https://www.youtube.com/*"
+            ]
+        }
+    ]
 }

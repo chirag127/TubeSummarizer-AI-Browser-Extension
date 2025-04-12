@@ -1,49 +1,72 @@
-// Handle extension installation and updates
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') {
-    // Set default settings
-    chrome.storage.sync.set({
-      ttsSettings: {
-        voice: 'default',
-        speed: 1.0,
-        pitch: 1.0
-      }
-    });
-  }
+/**
+ * YouTube Video Summarizer + Read Aloud Sidebar Extension
+ * Background Service Worker
+ */
+
+// Configuration
+const BACKEND_URL = "http://localhost:3000";
+
+// Store API key in local storage
+chrome.storage.local.get("backendUrl", (result) => {
+    if (!result.backendUrl) {
+        chrome.storage.local.set({ backendUrl: BACKEND_URL });
+    }
 });
 
-// Handle messages from content script
+// Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'summarize') {
-    // Send transcript to backend for summarization
-    fetch('http://localhost:3000/summarize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        videoId: message.videoId,
-        transcript: message.transcript,
-        title: message.title
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      // Send summary back to content script
-      sendResponse({ success: true, summary: data.summary });
-    })
-    .catch(error => {
-      console.error('Error summarizing video:', error);
-      sendResponse({ success: false, error: error.message });
-    });
-    
-    // Return true to indicate that the response will be sent asynchronously
-    return true;
-  }
+    if (message.type === "SUMMARIZE_VIDEO") {
+        summarizeVideo(message.data)
+            .then((response) => {
+                sendResponse(response);
+            })
+            .catch((error) => {
+                console.error("Error in summarizeVideo:", error);
+                sendResponse({
+                    error: error.message || "Failed to summarize video",
+                });
+            });
+
+        // Return true to indicate that the response will be sent asynchronously
+        return true;
+    }
+
+    // Return false if we didn't handle the message
+    return false;
 });
 
-// Handle browser action click
-chrome.action.onClicked.addListener((tab) => {
-  // Send message to content script to toggle sidebar
-  chrome.tabs.sendMessage(tab.id, { action: 'toggleSidebar' });
-});
+/**
+ * Make API request to backend to summarize video
+ */
+async function summarizeVideo(data) {
+    try {
+        // Get backend URL from storage, fallback to default
+        const storage = await chrome.storage.local.get("backendUrl");
+        const backendUrl = storage.backendUrl || BACKEND_URL;
+
+        // Make API request
+        const response = await fetch(`${backendUrl}/summarize`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                videoId: data.videoId,
+                title: data.title,
+                transcript: data.transcript,
+            }),
+        });
+
+        // Parse response
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Failed to summarize video");
+        }
+
+        return result;
+    } catch (error) {
+        console.error("Error in summarizeVideo API call:", error);
+        throw error;
+    }
+}
