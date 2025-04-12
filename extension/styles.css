@@ -1,0 +1,126 @@
+/* Sidebar */
+.yt-summarizer-sidebar {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  width: 300px;
+  height: calc(100vh - 56px);
+  background-color: white;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+  font-family: 'Roboto', sans-serif;
+}
+
+.yt-summarizer-sidebar-hidden {
+  transform: translateX(100%);
+}
+
+/* Header */
+.yt-summarizer-header {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+  cursor: move;
+}
+
+.yt-summarizer-logo {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+.yt-summarizer-title {
+  flex-grow: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.yt-summarizer-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #606060;
+}
+
+.yt-summarizer-close:hover {
+  color: #ff0000;
+}
+
+/* Content */
+.yt-summarizer-content {
+  flex-grow: 1;
+  padding: 15px;
+  overflow-y: auto;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* TTS Controls */
+.yt-summarizer-tts-controls {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+}
+
+.yt-summarizer-play,
+.yt-summarizer-pause,
+.yt-summarizer-stop,
+.yt-summarizer-settings {
+  background-color: #065fd4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.yt-summarizer-play:hover,
+.yt-summarizer-pause:hover,
+.yt-summarizer-stop:hover,
+.yt-summarizer-settings:hover {
+  background-color: #0056b3;
+}
+
+/* Resizer */
+.yt-summarizer-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 5px;
+  cursor: ew-resize;
+  background-color: transparent;
+}
+
+.yt-summarizer-resizer:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Word highlighting */
+.yt-summarizer-word {
+  display: inline;
+}
+
+.yt-summarizer-word-highlight {
+  background-color: #ffeb3b;
+  border-radius: 2px;
+  padding: 2px 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .yt-summarizer-sidebar {
+    width: 250px;
+  }
+}

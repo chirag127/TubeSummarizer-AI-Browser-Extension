@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Summarizer Settings</title>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    
+    h1 {
+      color: #065fd4;
+      margin-top: 0;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    select, input[type="range"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: white;
+    }
+    
+    .range-value {
+      display: inline-block;
+      width: 40px;
+      text-align: center;
+      margin-left: 10px;
+    }
+    
+    button {
+      background-color: #065fd4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #0056b3;
+    }
+    
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Video Summarizer Settings</h1>
+    
+    <div class="form-group">
+      <label for="voice-select">Text-to-Speech Voice:</label>
+      <select id="voice-select">
+        <option value="default">Default</option>
+        <!-- Voice options will be populated by JavaScript -->
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="speed-range">Speech Speed: <span id="speed-value" class="range-value">1.0</span></label>
+      <input type="range" id="speed-range" min="0.5" max="2" step="0.1" value="1.0">
+    </div>
+    
+    <div class="form-group">
+      <label for="pitch-range">Speech Pitch: <span id="pitch-value" class="range-value">1.0</span></label>
+      <input type="range" id="pitch-range" min="0.5" max="2" step="0.1" value="1.0">
+    </div>
+    
+    <button id="save-button">Save Settings</button>
+    
+    <div id="status" class="status"></div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>
