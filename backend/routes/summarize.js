@@ -3,58 +3,96 @@
  *
  * Handles requests to summarize video content.
  */
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-// Placeholder for Gemini service
-// const geminiService = require('../services/gemini');
-// Placeholder for YouTube utils
-// const youtubeUtil = require('../utils/youtube');
+// Import services and utilities
+const geminiService = require("../services/gemini");
+const youtubeUtil = require("../utils/youtube");
 
-router.post('/', async (req, res) => {
-  console.log("POST /summarize received");
-  const { transcript, videoId, audioUrl } = req.body;
+/**
+ * POST /summarize
+ * Summarizes video content from transcript, videoId, or title
+ *
+ * Request body:
+ * - transcript: Optional. The video transcript text
+ * - videoId: Optional. YouTube video ID to fetch transcript
+ * - title: Optional. The title of the video for better summarization
+ * - language: Optional. Language for the summary (default: English)
+ */
+router.post("/", async (req, res) => {
+    console.log("POST /summarize received");
+    const { transcript, videoId, title, language } = req.body;
 
-  if (!transcript && !audioUrl && !videoId) {
-    return res.status(400).json({ error: 'Missing transcript, audioUrl, or videoId' });
-  }
-
-  try {
-    let contentToSummarize = transcript;
-
-    // --- TODO: Implement fetching logic ---
-    if (!contentToSummarize && videoId) {
-      console.log(`Summarize: Fetching transcript for videoId: ${videoId}`);
-      // contentToSummarize = await youtubeUtil.getTranscript(videoId);
-      // Placeholder:
-      contentToSummarize = `Simulated transcript for ${videoId}. Needs implementation.`;
-    } else if (!contentToSummarize && audioUrl) {
-       console.log(`Summarize: Processing audio from URL: ${audioUrl}`);
-       // contentToSummarize = await youtubeUtil.processAudio(audioUrl); // This would involve transcription
-       // Placeholder:
-       contentToSummarize = `Simulated transcript from audio URL ${audioUrl}. Needs implementation.`;
-    }
-    // --- End TODO ---
-
-    if (!contentToSummarize) {
-        return res.status(400).json({ error: 'Could not retrieve content to summarize.' });
+    if (!transcript && !videoId) {
+        return res.status(400).json({
+            error: "Missing required parameters",
+            message: "Either transcript or videoId must be provided",
+        });
     }
 
-    console.log("Summarize: Content ready, calling AI service...");
-    // --- TODO: Call Gemini Service ---
-    // const summary = await geminiService.summarize(contentToSummarize);
-    // Placeholder:
-    const summary = `AI Summary Placeholder:
-- Point 1 based on content snippet: ${contentToSummarize.substring(0, 50)}...
-- Point 2 needs real AI call.`;
-    // --- End TODO ---
+    try {
+        let contentToSummarize = transcript;
+        let videoTitle = title || "";
+        let transcriptData = null;
 
-    res.json({ summary });
+        // If transcript not provided but videoId is, fetch the transcript
+        if (!contentToSummarize && videoId) {
+            console.log(
+                `Summarize: Fetching transcript for videoId: ${videoId}`
+            );
+            try {
+                transcriptData = await youtubeUtil.getTranscript(videoId);
+                contentToSummarize = transcriptData.text;
 
-  } catch (error) {
-    console.error("Error in /summarize route:", error);
-    res.status(500).json({ error: 'Failed to generate summary.', details: error.message });
-  }
+                // If title not provided, try to get it from YouTube
+                if (!videoTitle) {
+                    const videoDetails = await youtubeUtil.getVideoDetails(
+                        videoId
+                    );
+                    videoTitle = videoDetails.title || "";
+                }
+            } catch (transcriptError) {
+                console.error("Error fetching transcript:", transcriptError);
+                return res.status(404).json({
+                    error: "Transcript not available",
+                    message: transcriptError.message,
+                });
+            }
+        }
+
+        if (!contentToSummarize) {
+            return res.status(400).json({
+                error: "No content to summarize",
+                message: "Could not retrieve or process content to summarize.",
+            });
+        }
+
+        console.log(
+            `Summarize: Content ready (${contentToSummarize.length} chars), calling AI service...`
+        );
+
+        // Call Gemini service to generate summary
+        const options = { language: language || "English" };
+        const summary = await geminiService.summarize(
+            contentToSummarize,
+            videoTitle,
+            options
+        );
+
+        // Return the summary along with any video details we have
+        res.json({
+            summary,
+            title: videoTitle || undefined,
+            videoId: videoId || undefined,
+        });
+    } catch (error) {
+        console.error("Error in /summarize route:", error);
+        res.status(500).json({
+            error: "Failed to generate summary",
+            message: error.message,
+        });
+    }
 });
 
 module.exports = router;

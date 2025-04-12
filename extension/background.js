@@ -5,26 +5,48 @@
  * Manages communication between content script, sidebar, and backend API.
  */
 
-// Backend API URL (would be replaced with actual API in production)
+// Backend API URL (update this for production)
 const API_BASE_URL = "http://localhost:3000";
+
+// Extension settings with defaults
+const DEFAULT_SETTINGS = {
+    language: "English",
+    autoSummarize: false,
+    ttsEnabled: true,
+    ttsVoice: "",
+    ttsSpeed: 1.0,
+};
 
 // Listen for installation or update
 chrome.runtime.onInstalled.addListener((details) => {
     console.log("TubeSummarizer AI installed or updated:", details);
-    // Perform any first-time setup here if needed
+
+    // Initialize settings if needed
+    chrome.storage.sync.get("settings", (data) => {
+        if (!data.settings) {
+            chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
+            console.log("Initialized default settings");
+        }
+    });
 });
 
 // Listen for messages from content script or sidebar
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log("Message received:", request, "from:", sender);
+    console.log(
+        "Message received:",
+        request.action,
+        "from:",
+        sender.tab?.url || "extension"
+    );
 
     // Handle request to get summary
     if (request.action === "getSummary") {
+        const { videoId, transcript, title } = request;
         console.log(
-            "Received request to get summary for videoId:",
-            request.videoId
+            `Fetching summary for video: ${videoId || "[No ID provided]"}`
         );
-        fetchSummary(request.videoId)
+
+        fetchSummary(videoId, transcript, title)
             .then((summary) => {
                 sendResponse({ success: true, summary });
             })
@@ -48,6 +70,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true; // Indicates that the response is sent asynchronously
     }
 
+    // Handle request to get transcript
+    else if (request.action === "getTranscript") {
+        const { videoId } = request;
+        fetchTranscript(videoId)
+            .then((transcriptData) => {
+                sendResponse({ success: true, transcriptData });
+            })
+            .catch((error) => {
+                console.error("Error fetching transcript:", error);
+                sendResponse({ success: false, error: error.message });
+            });
+        return true; // Indicates that the response is sent asynchronously
+    }
+
     // Handle request to close sidebar
     else if (request.action === "closeSidebar" && sender.tab?.id) {
         chrome.tabs
@@ -59,6 +95,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.error("Error closing sidebar:", error);
                 sendResponse({ success: false, error: error.message });
             });
+        return true; // Indicates that the response is sent asynchronously
+    }
+
+    // Handle request to get settings
+    else if (request.action === "getSettings") {
+        chrome.storage.sync.get("settings", (data) => {
+            sendResponse({ settings: data.settings || DEFAULT_SETTINGS });
+        });
+        return true; // Indicates that the response is sent asynchronously
+    }
+
+    // Handle request to save settings
+    else if (request.action === "saveSettings") {
+        const { settings } = request;
+        chrome.storage.sync.set({ settings }, () => {
+            sendResponse({ success: true });
+        });
         return true; // Indicates that the response is sent asynchronously
     }
 });
@@ -88,45 +141,97 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 /**
+ * Fetch transcript for a YouTube video
+ * @param {string} videoId - YouTube video ID
+ * @returns {Promise<Object>} - Transcript data
+ */
+async function fetchTranscript(videoId) {
+    if (!videoId) {
+        throw new Error("No video ID provided");
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/transcript/${videoId}`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+                errorData.message ||
+                    `Failed to fetch transcript: ${response.status}`
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching transcript:", error);
+        throw error;
+    }
+}
+
+/**
  * Fetch summary for a YouTube video
  * @param {string} videoId - YouTube video ID
+ * @param {string} transcript - Optional transcript text (if already available)
+ * @param {string} title - Optional video title
  * @returns {Promise<Object>} - Summary object with title and text
  */
-async function fetchSummary(videoId) {
-    // In a real implementation, this would call your backend API
-    // For now, we'll simulate a response
+async function fetchSummary(videoId, transcript, title) {
+    try {
+        // Get user's language preference
+        const { settings } = await new Promise((resolve) => {
+            chrome.storage.sync.get("settings", (data) => {
+                resolve(data);
+            });
+        });
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+        const language = settings?.language || DEFAULT_SETTINGS.language;
 
-    // Simulate API response
-    return {
-        title: "How to Build a Web App in 10 Minutes",
-        text: "This tutorial demonstrates how to quickly build a web application using modern frameworks. The presenter starts by setting up a new project with React and Vite, then adds styling with Tailwind CSS. They show how to create components for the header, main content, and footer. The app includes features like user authentication and data fetching from an API. Finally, they deploy the finished app to Vercel. Key takeaways include using component libraries to speed up development, implementing responsive design from the start, and leveraging modern tools for deployment.",
-    };
+        // Prepare request body
+        const requestBody = {
+            language,
+        };
 
-    // Real implementation would look something like this:
-    /*
-  try {
-    // First get transcript
-    const transcriptResponse = await fetch(`${API_BASE_URL}/transcript/${videoId}`);
-    if (!transcriptResponse.ok) throw new Error("Failed to fetch transcript");
-    const transcript = await transcriptResponse.json();
+        // Add transcript if provided
+        if (transcript) {
+            requestBody.transcript = transcript;
+        }
+        // Otherwise add videoId
+        else if (videoId) {
+            requestBody.videoId = videoId;
+        } else {
+            throw new Error("Either transcript or videoId must be provided");
+        }
 
-    // Then get summary
-    const summaryResponse = await fetch(`${API_BASE_URL}/summarize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript: transcript.text })
-    });
+        // Add title if provided
+        if (title) {
+            requestBody.title = title;
+        }
 
-    if (!summaryResponse.ok) throw new Error("Failed to generate summary");
-    return summaryResponse.json();
-  } catch (error) {
-    console.error("Error in fetchSummary:", error);
-    throw error;
-  }
-  */
+        // Call the summarize API
+        const response = await fetch(`${API_BASE_URL}/summarize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+                errorData.message ||
+                    `Failed to generate summary: ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+
+        return {
+            title: data.title || title || "Video Summary",
+            text: data.summary,
+        };
+    } catch (error) {
+        console.error("Error in fetchSummary:", error);
+        throw error;
+    }
 }
 
 /**

@@ -1,89 +1,148 @@
 /**
- * TubeSummarizer AI - YouTube Utilities
+ * TubeSummarizer AI - YouTube Utility
  *
- * Functions for fetching transcripts or processing video audio.
+ * Handles YouTube transcript extraction and processing.
  */
 
-// TODO: Install necessary libraries, e.g., youtube-transcript, fluent-ffmpeg, @google-cloud/speech
-// npm install youtube-transcript fluent-ffmpeg @google-cloud/speech
-
-// const { YoutubeTranscript } = require('youtube-transcript');
-// const ffmpeg = require('fluent-ffmpeg');
-// const speech = require('@google-cloud/speech'); // Or another speech-to-text API
-
-// TODO: Configure ffmpeg path if needed
-// ffmpeg.setFfmpegPath('/path/to/your/ffmpeg');
-
-// TODO: Configure Speech-to-Text client
-// const speechClient = new speech.SpeechClient(); // Needs authentication setup
+const axios = require("axios");
+const { YoutubeTranscript } = require("youtube-transcript-api");
 
 /**
- * Fetches the transcript for a given YouTube video ID.
- * Attempts to use the YouTube Transcript API first.
- * Falls back to audio processing if transcripts are unavailable (TODO).
- * @param {string} videoId The YouTube video ID.
- * @returns {Promise<Array<{timestamp: number, text: string}>|null>} Transcript data or null if unavailable.
+ * Get the transcript for a YouTube video
+ * @param {string} videoId - The YouTube video ID
+ * @returns {Promise<{text: string, segments: Array}>} The transcript text and segments
  */
 async function getTranscript(videoId) {
-  console.log(`YouTube Util: Attempting to fetch transcript for ${videoId}`);
-  try {
-    // --- TODO: Implement YouTube Transcript API Fetch ---
-    // const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-    // console.log(`YouTube Util: Transcript found via API for ${videoId}`);
-    // return transcript.map(item => ({
-    //   timestamp: Math.floor(item.offset / 1000), // Convert ms to seconds
-    //   text: item.text
-    // }));
-    // --- End TODO ---
+    try {
+        if (!videoId) {
+            throw new Error("No video ID provided");
+        }
 
-    // Placeholder logic:
-    if (videoId === 'test' || videoId === 'short') {
-        console.warn("YouTube Util: Using simulated transcript for test video.");
-        return [
-            { timestamp: 0, text: "Hello and welcome." },
-            { timestamp: 5, text: "This is a test transcript." },
-            { timestamp: 10, text: "End of simulation." }
-        ];
+        console.log(
+            `YouTube Utility: Fetching transcript for video ID: ${videoId}`
+        );
+
+        // For test videos, return a simulated transcript
+        if (videoId === "test" || videoId === "short") {
+            console.warn(
+                "YouTube Utility: Using simulated transcript for test video."
+            );
+            const segments = [
+                { timestamp: 0, text: "Hello and welcome." },
+                { timestamp: 5, text: "This is a test transcript." },
+                { timestamp: 10, text: "End of simulation." },
+            ];
+            return {
+                text: segments.map((item) => item.text).join(" "),
+                segments: segments,
+            };
+        }
+
+        // Fetch transcript using youtube-transcript-api
+        const transcriptItems = await YoutubeTranscript.fetchTranscript(
+            videoId
+        );
+
+        if (!transcriptItems || transcriptItems.length === 0) {
+            throw new Error("No transcript available for this video");
+        }
+
+        // Process transcript items
+        const fullText = transcriptItems.map((item) => item.text).join(" ");
+
+        // Convert to our standard format
+        const segments = transcriptItems.map((item) => ({
+            timestamp: Math.floor(item.offset / 1000), // Convert ms to seconds
+            text: item.text,
+        }));
+
+        return {
+            text: fullText,
+            segments: segments,
+        };
+    } catch (error) {
+        console.error(
+            `YouTube Utility: Error fetching transcript: ${error.message}`
+        );
+
+        // If the error is related to transcript not being available, try fallback methods
+        if (
+            error.message.includes("No transcript available") ||
+            error.message.includes("Could not retrieve a transcript")
+        ) {
+            return await fallbackTranscriptMethod(videoId);
+        }
+
+        throw new Error(`Failed to get transcript: ${error.message}`);
     }
-    // --- End Placeholder ---
-
-
-    console.warn(`YouTube Util: Transcript API failed or unavailable for ${videoId}. Audio fallback not implemented.`);
-    // --- TODO: Implement Audio Fallback ---
-    // 1. Download audio using youtube-dl or similar (might need a dedicated library like ytdl-core)
-    // const audioUrl = await getAudioStreamUrl(videoId); // Placeholder function
-    // 2. Transcribe audio using Google Cloud Speech-to-Text or Whisper API
-    // const transcription = await transcribeAudio(audioUrl); // Placeholder function
-    // return transcription; // Format needs to match {timestamp, text}
-    // --- End TODO ---
-
-    return null; // Return null if transcript not found and fallback not implemented
-
-  } catch (error) {
-    console.error(`YouTube Util: Error fetching transcript for ${videoId}:`, error);
-    // Don't throw, just return null if transcript isn't available
-    return null;
-  }
 }
 
 /**
- * Placeholder for audio processing (transcription).
- * @param {string} audioUrl URL or path to the audio file.
- * @returns {Promise<Array<{timestamp: number, text: string}>|null>}
+ * Fallback method to get transcript when the primary method fails
+ * @param {string} videoId - The YouTube video ID
+ * @returns {Promise<{text: string, segments: Array}>} The transcript text and segments
  */
-async function processAudio(audioUrl) {
-    console.warn(`YouTube Util: Audio processing/transcription for ${audioUrl} not implemented.`);
-    // --- TODO: Implement Audio Transcription ---
-    // 1. Download audio if it's a URL
-    // 2. Convert audio to suitable format (e.g., FLAC, LINEAR16) using ffmpeg
-    // 3. Send to Speech-to-Text API
-    // 4. Format response into {timestamp, text} array
-    // --- End TODO ---
-    return null;
+async function fallbackTranscriptMethod(videoId) {
+    try {
+        console.log(
+            `YouTube Utility: Attempting fallback transcript method for ${videoId}`
+        );
+
+        // Attempt to get video details to extract title
+        const videoDetails = await getVideoDetails(videoId);
+        const title = videoDetails?.title || "Unknown Video";
+
+        // For now, return an error message
+        // In a production environment, you might implement additional fallback methods:
+        // 1. Try different transcript APIs
+        // 2. Use speech-to-text on the audio track
+        // 3. Use OCR on captions if they're burned into the video
+
+        throw new Error(
+            "No transcript available and fallback methods not implemented"
+        );
+    } catch (error) {
+        console.error(
+            `YouTube Utility: Fallback transcript method failed: ${error.message}`
+        );
+        throw error;
+    }
 }
 
+/**
+ * Get video details from YouTube
+ * @param {string} videoId - The YouTube video ID
+ * @returns {Promise<Object>} Video details including title
+ */
+async function getVideoDetails(videoId) {
+    try {
+        console.log(`YouTube Utility: Fetching video details for ${videoId}`);
+
+        // Use YouTube's oEmbed API to get basic video information
+        const response = await axios.get(
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+        );
+
+        if (response.status !== 200) {
+            throw new Error(
+                `Failed to fetch video details: HTTP ${response.status}`
+            );
+        }
+
+        return {
+            title: response.data.title,
+            author: response.data.author_name,
+            thumbnailUrl: response.data.thumbnail_url,
+        };
+    } catch (error) {
+        console.error(
+            `YouTube Utility: Error fetching video details: ${error.message}`
+        );
+        return { title: "Unknown Video" };
+    }
+}
 
 module.exports = {
-  getTranscript,
-  processAudio,
+    getTranscript,
+    getVideoDetails,
 };

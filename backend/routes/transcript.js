@@ -3,46 +3,83 @@
  *
  * Handles requests to fetch video transcripts.
  */
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-// Placeholder for YouTube utils
-// const youtubeUtil = require('../utils/youtube');
+// Import YouTube utilities
+const youtubeUtil = require("../utils/youtube");
 
-router.get('/:videoId', async (req, res) => {
-  const videoId = req.params.videoId;
-  console.log(`GET /transcript/${videoId} received`);
+/**
+ * GET /transcript/:videoId
+ * Fetches the transcript for a YouTube video
+ *
+ * URL Parameters:
+ * - videoId: The YouTube video ID
+ *
+ * Query Parameters:
+ * - format: Optional. Format of the transcript ('text' or 'segments', default: 'segments')
+ */
+router.get("/:videoId", async (req, res) => {
+    const videoId = req.params.videoId;
+    const format = req.query.format || "segments";
 
-  if (!videoId) {
-    return res.status(400).json({ error: 'Missing videoId parameter' });
-  }
+    console.log(`GET /transcript/${videoId} received (format: ${format})`);
 
-  try {
-    // --- TODO: Implement transcript fetching logic (youtube.js) ---
-    // 1. Check YouTube Transcript API
-    // 2. Fallback to audio extraction/transcription if needed
-    // const transcriptData = await youtubeUtil.getTranscript(videoId);
-    // Placeholder:
-    let transcriptData = null;
-    if (videoId === 'test') {
-        transcriptData = [
-            { timestamp: 0, text: "Hello and welcome." },
-            { timestamp: 5, text: "This is a test transcript." },
-            { timestamp: 10, text: "End of simulation." }
-        ];
-    }
-    // --- End TODO ---
-
-    if (transcriptData) {
-      res.json({ transcript: transcriptData });
-    } else {
-      res.status(404).json({ error: 'Transcript not found for this video.' });
+    if (!videoId) {
+        return res.status(400).json({
+            error: "Missing parameter",
+            message: "videoId parameter is required",
+        });
     }
 
-  } catch (error) {
-    console.error(`Error in /transcript/${videoId} route:`, error);
-    res.status(500).json({ error: 'Failed to fetch transcript.', details: error.message });
-  }
+    try {
+        // Fetch transcript using YouTube utility
+        const transcriptData = await youtubeUtil.getTranscript(videoId);
+
+        if (!transcriptData) {
+            return res.status(404).json({
+                error: "Transcript not found",
+                message: "No transcript available for this video",
+            });
+        }
+
+        // Get video details for additional context
+        let videoDetails = null;
+        try {
+            videoDetails = await youtubeUtil.getVideoDetails(videoId);
+        } catch (detailsError) {
+            console.warn(
+                `Could not fetch video details for ${videoId}:`,
+                detailsError.message
+            );
+            // Continue without video details
+        }
+
+        // Format response based on requested format
+        if (format === "text") {
+            res.json({
+                transcript: transcriptData.text,
+                videoId,
+                title: videoDetails?.title,
+                author: videoDetails?.author,
+            });
+        } else {
+            // Default: return segments
+            res.json({
+                transcript: transcriptData.segments,
+                text: transcriptData.text, // Include full text for convenience
+                videoId,
+                title: videoDetails?.title,
+                author: videoDetails?.author,
+            });
+        }
+    } catch (error) {
+        console.error(`Error in /transcript/${videoId} route:`, error);
+        res.status(500).json({
+            error: "Failed to fetch transcript",
+            message: error.message,
+        });
+    }
 });
 
 module.exports = router;
