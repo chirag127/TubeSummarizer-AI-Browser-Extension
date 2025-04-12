@@ -1,102 +1,157 @@
-# TubeSummarizer AI Browser Extension
+# YouTube Video Summarizer + Read Aloud Sidebar Browser Extension
 
-A browser extension that automatically summarizes YouTube videos and displays the summary in a sidebar on the video page. Additionally, it offers a "Read Aloud" feature that speaks the summary out loud with real-time, word-by-word highlighting.
+A browser extension that automatically summarizes YouTube videos and provides a read-aloud feature with word-by-word highlighting.
 
 ## Features
 
--   **Auto Summary Generation**: Automatically detects when a user is on a YouTube video page, extracts the transcript, and sends it to the backend for summarization using Gemini 2.0 Flash Lite.
--   **Sidebar UI**: Toggleable sidebar on the right of the YouTube video that displays the video title, AI-generated summary, and Read Aloud controls.
--   **Read Aloud with Word Highlighting**: Reads the summary using the Web Speech API with real-time, word-by-word highlighting.
--   **Customizable TTS Settings**: Adjust playback speed, voice selection, and pitch.
--   **Cross-Browser Compatibility**: Works on Chrome, Edge, and Firefox.
+-   **Automatic Video Summarization**: Uses Gemini 2.0 Flash Lite AI to generate concise, high-quality summaries of YouTube videos
+-   **Non-intrusive Sidebar**: Displays summaries in a clean, resizable sidebar without disrupting your YouTube experience
+-   **Read Aloud with Word Highlighting**: Highlights each word as it's spoken using the Web Speech API
+-   **Voice Selection**: Choose from available system voices for read-aloud
+-   **Playback Controls**: Adjust speed and pitch of the spoken text
+-   **Multi-language Support**: Works with videos in various languages (transcript availability dependent)
+-   **Multi-browser Support**: Compatible with Chrome, Edge, and Firefox
 
 ## Installation
 
-### Extension
+### Prerequisites
 
-1. Clone this repository:
+-   Node.js (v14 or newer)
+-   npm (v6 or newer)
+
+### Backend Setup
+
+1. Clone the repository:
 
     ```
     git clone https://github.com/chirag127/TubeSummarizer-AI-Browser-Extension.git
-    ```
-
-2. Load the extension in Chrome:
-
-    - Open Chrome and go to `chrome://extensions/`
-    - Enable "Developer mode"
-    - Click "Load unpacked" and select the `extension` folder from this repository
-
-3. Load the extension in Firefox:
-
-    - Open Firefox and go to `about:debugging#/runtime/this-firefox`
-    - Click "Load Temporary Add-on..." and select the `manifest.json` file from the `extension` folder
-
-4. Load the extension in Edge:
-    - Open Edge and go to `edge://extensions/`
-    - Enable "Developer mode"
-    - Click "Load unpacked" and select the `extension` folder from this repository
-
-### Backend Server
-
-1. Navigate to the backend folder:
-
-    ```
-    cd backend
+    cd TubeSummarizer-AI-Browser-Extension
     ```
 
 2. Install dependencies:
 
     ```
     npm install
+    npm run install:backend
     ```
 
-3. Create a `.env` file with your Gemini API key:
+3. Set up your `.env` file in the `backend` directory:
 
     ```
     PORT=3000
     GEMINI_API_KEY=your_gemini_api_key_here
     ```
 
-4. Start the server:
+    > You'll need a valid API key for Gemini 2.0 Flash Lite.
+
+4. Start the backend server:
     ```
-    npm start
+    npm run start:backend
     ```
+
+### Extension Setup
+
+1. Build the extension:
+
+    ```
+    npm run build
+    ```
+
+2. Install in Chrome/Edge:
+
+    - Open Chrome/Edge and navigate to `chrome://extensions/`
+    - Enable "Developer mode"
+    - Click "Load unpacked"
+    - Select the `extension` folder from the repository
+
+3. Install in Firefox:
+    - Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+    - Click "Load Temporary Add-on..."
+    - Select the `manifest.json` file from the `extension` folder
 
 ## Usage
 
-1. Visit a YouTube video page.
-2. The extension will automatically detect the video and inject a sidebar.
-3. Click the extension icon or use the keyboard shortcut (Ctrl+Shift+S) to toggle the sidebar.
-4. The summary will be displayed in the sidebar.
-5. Click the "Read Aloud" button to have the summary read aloud with word-by-word highlighting.
-6. Use the TTS controls to pause, stop, or adjust the playback.
-7. Click the settings icon to customize the TTS settings.
+1. Navigate to any YouTube video page
+2. The extension will automatically detect the video and extract its transcript
+3. A summary will be generated and displayed in the sidebar
+4. Click "Read Aloud" to have the summary read to you with word-by-word highlighting
+5. Use the settings icon to customize the voice, speed, and pitch of the read-aloud feature
 
 ## Development
 
-### Extension
+### Project Structure
 
-The extension is built using vanilla JavaScript, HTML, and CSS. It consists of the following components:
+```
+project-root/
+│
+├── extension/               # Browser extension frontend
+│   ├── manifest.json        # Extension manifest
+│   ├── content.js           # Content script for YouTube pages
+│   ├── background.js        # Background service worker
+│   ├── sidebar.html         # Sidebar HTML
+│   ├── sidebar.css          # Sidebar styles
+│   ├── sidebar.js           # Sidebar script (handles TTS)
+│   ├── popup.html           # Extension popup
+│   ├── popup.js             # Popup script
+│   └── icons/               # Extension icons
+│
+├── backend/                 # Backend server
+│   ├── server.js            # Express.js server
+│   ├── package.json         # Backend dependencies
+│   └── .env                 # Environment variables
+│
+├── scripts/                 # Build and utility scripts
+│   ├── build.js             # Build script
+│   └── create-icons.js      # Icon generation script
+│
+├── package.json             # Project dependencies
+└── README.md                # Project documentation
+```
 
--   `manifest.json`: Extension configuration
--   `background.js`: Background service worker
--   `content.js`: Content script for YouTube pages
--   `tts.js`: Text-to-speech with word highlighting
--   `styles.css`: Styles for the sidebar
--   `options.html/js`: Options page for TTS settings
+### Development Workflow
 
-### Backend
+1. Start the backend server:
 
-The backend is built using Express.js and integrates with the Gemini 2.0 Flash Lite API for summarization. It consists of the following components:
+    ```
+    npm run dev:backend
+    ```
 
--   `server.js`: Express.js server
--   `summarizer.js`: Gemini API integration
+2. Make changes to the extension code in the `extension` directory
+
+3. Load the extension in your browser for testing:
+    - For Chrome/Edge, click the refresh button on the extension card in `chrome://extensions/`
+    - For Firefox, reload the extension in `about:debugging#/runtime/this-firefox`
+
+### Building
+
+Run the build script to package the extension:
+
+```
+npm run build
+```
+
+This will generate extension packages in the `dist` directory.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgements
+## Acknowledgments
 
--   [Gemini 2.0 Flash Lite API](https://ai.google.dev/) for AI-powered summarization
--   [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) for text-to-speech functionality
+-   [Gemini 2.0 Flash Lite API](https://ai.google.dev/gemini-api) for AI-powered summarization
+-   [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) for TTS functionality
+-   [Chrome Extensions API](https://developer.chrome.com/docs/extensions/reference/) and [Firefox WebExtensions API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions) for browser extension functionality
+
+---
+
+Created by [chirag127](https://github.com/chirag127)

@@ -1,101 +1,102 @@
+/**
+ * Build script for the YouTube Video Summarizer extension
+ */
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
-// Paths
-const rootDir = path.resolve(__dirname, "..");
-const extensionDir = path.join(rootDir, "extension");
-const distDir = path.join(rootDir, "dist");
+// Directories
+const ROOT_DIR = path.join(__dirname, "..");
+const EXTENSION_DIR = path.join(ROOT_DIR, "extension");
+const DIST_DIR = path.join(ROOT_DIR, "dist");
 
-// Create dist directory if it doesn't exist
-if (!fs.existsSync(distDir)) {
-    fs.mkdirSync(distDir, { recursive: true });
+/**
+ * Ensure directory exists
+ */
+function ensureDirectoryExists(dir) {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
 }
 
-// Build for Chrome/Edge
-function buildChrome() {
-    console.log("Building for Chrome/Edge...");
+/**
+ * Copy files recursively
+ */
+function copyFiles(sourceDir, targetDir) {
+    // Create target directory if it doesn't exist
+    ensureDirectoryExists(targetDir);
 
-    const chromeDir = path.join(distDir, "chrome");
+    // Read directory contents
+    const items = fs.readdirSync(sourceDir, { withFileTypes: true });
 
-    // Create chrome directory if it doesn't exist
-    if (!fs.existsSync(chromeDir)) {
-        fs.mkdirSync(chromeDir);
+    // Process each item
+    for (const item of items) {
+        const sourcePath = path.join(sourceDir, item.name);
+        const targetPath = path.join(targetDir, item.name);
+
+        if (item.isDirectory()) {
+            // Recursively copy directory
+            copyFiles(sourcePath, targetPath);
+        } else {
+            // Copy file
+            fs.copyFileSync(sourcePath, targetPath);
+        }
     }
-
-    // Copy extension files to chrome directory
-    execSync(`cp -r ${extensionDir}/* ${chromeDir}`);
-
-    // Create zip file
-    execSync(`cd ${chromeDir} && zip -r ../youtube-summarizer-chrome.zip .`);
-
-    console.log("Chrome/Edge build completed!");
 }
 
-// Build for Firefox
-function buildFirefox() {
-    console.log("Building for Firefox...");
-
-    const firefoxDir = path.join(distDir, "firefox");
-
-    // Create firefox directory if it doesn't exist
-    if (!fs.existsSync(firefoxDir)) {
-        fs.mkdirSync(firefoxDir);
+/**
+ * Generate icons using the create-icons script
+ */
+function generateIcons() {
+    console.log("Generating icons...");
+    try {
+        execSync("npm run create:icons", { stdio: "inherit" });
+        console.log("Icons generated successfully!");
+    } catch (error) {
+        console.error("Error generating icons:", error);
+        throw error;
     }
-
-    // Copy extension files to firefox directory
-    execSync(`cp -r ${extensionDir}/* ${firefoxDir}`);
-
-    // Modify manifest for Firefox
-    const manifestPath = path.join(firefoxDir, "manifest.json");
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-
-    // Firefox-specific changes
-    manifest.browser_specific_settings = {
-        gecko: {
-            id: "youtube-summarizer@chirag127.github.io",
-            strict_min_version: "57.0",
-        },
-    };
-
-    // Save modified manifest
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-
-    // Create zip file using web-ext
-    execSync(
-        `cd ${firefoxDir} && web-ext build --overwrite-dest --artifacts-dir ${distDir}`
-    );
-
-    // Rename the generated zip file
-    const webExtOutput = fs
-        .readdirSync(distDir)
-        .find((file) => file.startsWith("web-ext-artifacts"));
-    if (webExtOutput) {
-        const zipFile = fs.readdirSync(path.join(distDir, webExtOutput))[0];
-        fs.renameSync(
-            path.join(distDir, webExtOutput, zipFile),
-            path.join(distDir, "youtube-summarizer-firefox.xpi")
-        );
-
-        // Remove web-ext-artifacts directory
-        execSync(`rm -rf ${path.join(distDir, webExtOutput)}`);
-    }
-
-    console.log("Firefox build completed!");
 }
 
-// Main build process
-function build() {
-    console.log("Starting build process...");
+/**
+ * Package extension using web-ext
+ */
+function packageExtension() {
+    console.log("Packaging extension...");
 
-    // Clean dist directory
-    execSync(`rm -rf ${distDir}/*`);
+    try {
+        // Create dist directory if it doesn't exist
+        ensureDirectoryExists(DIST_DIR);
 
-    // Build for different browsers
-    buildChrome();
-    buildFirefox();
+        // Build extension
+        const command = `npx web-ext build --source-dir=${EXTENSION_DIR} --artifacts-dir=${DIST_DIR} --overwrite-dest`;
+        execSync(command, { stdio: "inherit" });
 
-    console.log("Build process completed successfully!");
+        console.log("Extension packaged successfully!");
+    } catch (error) {
+        console.error("Error packaging extension:", error);
+        throw error;
+    }
+}
+
+/**
+ * Main build function
+ */
+async function build() {
+    try {
+        console.log("Starting build process...");
+
+        // Generate icons
+        generateIcons();
+
+        // Package extension
+        packageExtension();
+
+        console.log("Build completed successfully!");
+    } catch (error) {
+        console.error("Build failed:", error);
+        process.exit(1);
+    }
 }
 
 // Run build
