@@ -1,142 +1,231 @@
-Here’s a full **Product Requirements Document (PRD)** for your **YouTube Video Summarizer + Read Aloud Sidebar Extension**:
-created it with the following sections:
----
-
-# 📄 Product Requirements Document
-**Product Name:** TubeSummarizer AI
-**Type:** Browser Extension
-**Supported Browsers:** Chrome, Edge, Firefox (Manifest V3)
+Here's the full **Product Requirements Document (PRD)** for your **YouTube Video Summarizer + Read Aloud Sidebar Extension**:
 
 ---
 
-## 🧠 Overview
-
-**TubeSummarizer AI** is a browser extension that automatically summarizes YouTube videos and displays the summary in a collapsible sidebar on the video page. It also reads the summary aloud with synchronized **word-by-word highlighting**.
-
----
-
-## 🎯 Goals
-
-- Automatically fetch the transcript or audio of a YouTube video.
-- Summarize the content using AI (Gemini 2.0 Flash Lite).
-- Display the summary in a styled sidebar.
-- Add a “Read Aloud” feature with:
-  - Word-by-word highlighting.
-  - Play, Pause, Speed, Voice options.
+# **Product Requirements Document (PRD)**
+**Product Name:** YouTube Video Summarizer + Read Aloud Sidebar
+**Platform:** Browser Extension (Chrome, Edge, Firefox)
+**Owner:** chirag127
+**Last Updated:** April 11, 2025
 
 ---
 
-## 🏗️ Architecture
+## **1. Overview**
 
-### Frontend
-- **Tech Stack:** HTML, CSS, JavaScript (Vanilla or React)
-- **Folder:** `extension/`
-- **Components:**
-  - `content.js`: Injects sidebar into YouTube page
-  - `sidebar.html/css/js`: UI and logic for summary and TTS
-  - `background.js`: Handles browser events
-  - `manifest.json`: Manifest V3 file
-  - `tts.js`: Handles TTS and word highlighting
-
-### Backend
-- **Tech Stack:** Express.js
-- **Folder:** `backend/`
-- **Endpoints:**
-  - `POST /summarize`: Receives video transcript/audio URL → returns summary
-  - `GET /transcript/:videoId`: Fetches transcript from YouTube (fallback to audio processing if not available)
-
-### ML
-- **Model:** Gemini 2.0 Flash Lite
-- **Use:** Summarize video transcripts or audio
+The **YouTube Video Summarizer + Read Aloud Sidebar Extension** is a browser extension that automatically summarizes YouTube videos and displays the summary in a sidebar on the video page. Additionally, it offers a "Read Aloud" feature that speaks the summary out loud with real-time, word-by-word highlighting.
 
 ---
 
-## ✨ Features
+## **2. Goals**
 
-### 🧾 Sidebar Summary
-- Collapsible sidebar injected on YouTube video pages.
-- Shows:
-  - Title
-  - Summary (paragraph style)
-  - “Read Aloud” button
-
-### 🔊 Read Aloud with Highlighting
-- Text-to-speech with:
-  - Play / Pause
-  - Speed Control
-  - Voice Selection
-- Highlights each word in sync with audio using `SpeechSynthesisUtterance` + `range.getBoundingClientRect()`
-
-### 📼 Transcript / Audio Extraction
-- Use YouTube transcript API if available
-- Fallback: Extract audio via `youtube-dl` backend method (server-side), transcribe via Whisper API (if needed)
+- Summarize YouTube videos using AI.
+- Display summary in a non-intrusive sidebar.
+- Provide a Read Aloud feature with word-level highlighting.
+- Support multiple browsers: Chrome, Edge, Firefox.
+- Maintain fast, smooth UX with secure AI processing.
 
 ---
 
-## 🧩 User Stories
+## **3. Features**
 
-1. **As a user**, when I watch a YouTube video, I want a sidebar that gives me a quick summary so I can decide if it’s worth watching.
-2. **As a user**, I want to hear the summary spoken aloud while following along with visual highlights so I can absorb the content more easily.
-3. **As a user**, I want to control the speed and voice of the read-aloud feature to suit my preferences.
+### **3.1. Auto Summary Generation**
+- Automatically detect when a user is on a YouTube video page.
+- Extract the transcript and video title and send it to the backend for summarization.
+- Send transcript to **Gemini 2.0 Flash Lite** via backend for summarization.
+- Display the summary in the extension's sidebar.
+
+### **3.2. Sidebar UI**
+- Toggleable sidebar on the right of the YouTube video.
+- Displays:
+  - Title of video
+  - AI-generated summary
+  - "Read Aloud" play/pause buttons
+  - Settings icon (for TTS settings)
+- Resizable and draggable interface.
+
+### **3.3. Read Aloud with Word Highlighting**
+- Reads the summary using the Web Speech API (or fallback to backend TTS).
+- Highlights each word as it’s spoken using bounding boxes or inline `<span>` highlights.
+- Word sync based on `SpeechSynthesisUtterance.onboundary`.
+
+### **3.4. Compatibility**
+- Works on:
+  - Chrome
+  - Microsoft Edge
+  - Firefox (polyfill for Web Speech API if needed)
+
+### **3.5. Settings**
+- Playback speed, voice selection, and pitch.
+- Save user preferences to `chrome.storage.sync`.
 
 ---
 
-## 🔐 Permissions (in `manifest.json`)
-```json
-"permissions": [
-  "activeTab",
-  "scripting",
-  "storage"
-],
-"host_permissions": [
-  "https://www.youtube.com/*"
-]
-```
+## **4. Technical Architecture**
+
+### **4.1. Frontend (extension/)**
+- **Manifest V3**
+- Content script:
+  - Injects sidebar into YouTube pages.
+  - Detects video URL change (YouTube uses SPA routing).
+- Background service worker:
+  - Handles messaging and API calls.
+- Sidebar HTML + CSS + JS:
+  - UI/UX for summary and TTS controls.
+  - Calls backend for summary.
+  - TTS and word-by-word highlight rendering.
+
+### **4.2. Backend (backend/)**
+- **Express.js API Server**
+  - `/summarize`: Accepts YouTube video ID and video title and text(transcript) calls Gemini API to summarize.
+- **Gemini 2.0 Flash Lite API Integration**
+  - Used to generate AI summary.
 
 ---
 
-## 📁 Project Structure
+## **5. Project Structure**
 
 ```
 project-root/
 │
-├── extension/
-│   ├── content.js
-│   ├── sidebar.html
-│   ├── sidebar.css
-│   ├── sidebar.js
-│   ├── tts.js
-│   ├── background.js
-│   └── manifest.json
+├── extension/                   # Browser extension frontend
+│   ├── manifest.json
 │
-├── backend/
-│   ├── index.js
-│   ├── routes/
-│   │   ├── summarize.js
-│   │   └── transcript.js
-│   ├── services/
-│   │   └── gemini.js
-│   └── utils/
-│       └── youtube.js
+├── backend/                     # Backend server
+│   └── .env
+│
+├── README.md
+└── package.json
 ```
 
----
-
-## 📌 Milestones
-
-| Task | Description | ETA |
-|------|-------------|-----|
-| UI Design | Build sidebar and read-aloud UI | Day 1 |
-| Transcript Fetch | Parse transcript or audio from video | Day 2 |
-| AI Summarization | Call Gemini backend API | Day 3 |
-| Read Aloud Engine | TTS with word-by-word highlighting | Day 4 |
-| Testing & Fixes | Cross-browser QA + UI polish | Day 5 |
-| Release | Package and upload extension | Day 6 |
+make the code as modular and reusable as possible
 
 ---
 
-## 🔍 Other Enhancements
+## **6. User Flow**
 
-- Download summary as PDF or audio.
-- Save summaries to cloud.
-- Chat with video content via Q&A (Gemini).
+1. User visits a YouTube video page.
+2. Content script detects video URL.
+3. Sidebar is injected into the page.
+4. Request is sent to the backend with the video ID.
+5. Backend fetches transcript and generates summary.
+6. Summary is displayed in the sidebar.
+7. User clicks “Read Aloud” → TTS starts and highlights each word as it's spoken.
+
+---
+
+## **7. APIs**
+
+### **Frontend → Backend**
+- `POST /summarize`
+  - `body: { videoId: string, transcript: string, title: string }`
+
+### **Backend → Gemini**
+- `POST /v1/generate`
+  - `prompt: Transcript text`
+  - `model: gemini-2.0-flash-lite`
+
+---
+
+## **8. Non-Functional Requirements**
+
+- Responsive, fast-loading sidebar (under 1s for render).
+- Summary returned within ~3s of transcript download.
+- Secure backend with rate limiting.
+- TTS support in both Chrome and Firefox.
+
+---
+
+## **9. Future Enhancements**
+
+- Support multilingual transcripts and summaries.
+- Add "Save Summary" to Notion/Docs.
+- Export as audio (MP3).
+- Summarization styles: Bullet points, TL;DR, Time-stamped.
+
+---
+
+## **10. Milestones**
+
+| Milestone                     | Timeline        |
+|------------------------------|-----------------|
+| Project scaffolding           | Day 1           |
+| Sidebar UI and TTS           | Day 2–3         |
+| Backend APIs (Gemini)| Day 4–5         |
+| Full integration + testing   | Day 6–7         |
+| Cross-browser packaging      | Day 8           |
+| Deployment and polishing     | Day 9–10        |
+
+---
+
+
+this following is example code for gemeni 2.0 flash lite api
+const {
+  GoogleGenerativeAI,
+  HarmCategory,
+  HarmBlockThreshold,
+} = require("@google/generative-ai");
+const fs = require("node:fs");
+const mime = require("mime-types");
+
+const apiKey = process.env.GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(apiKey);
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash-lite",
+});
+
+const generationConfig = {
+  temperature: 1,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192,
+  responseModalities: [
+  ],
+  responseMimeType: "text/plain",
+};
+
+async function run() {
+  const chatSession = model.startChat({
+    generationConfig,
+    history: [
+    ],
+  });
+
+  const result = await chatSession.sendMessage("INSERT_INPUT_HERE");
+  // TODO: Following code needs to be updated for client-side apps.
+  const candidates = result.response.candidates;
+  for(let candidate_index = 0; candidate_index < candidates.length; candidate_index++) {
+    for(let part_index = 0; part_index < candidates[candidate_index].content.parts.length; part_index++) {
+      const part = candidates[candidate_index].content.parts[part_index];
+      if(part.inlineData) {
+        try {
+          const filename = `output_${candidate_index}_${part_index}.${mime.extension(part.inlineData.mimeType)}`;
+          fs.writeFileSync(filename, Buffer.from(part.inlineData.data, 'base64'));
+          console.log(`Output written to: ${filename}`);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+  }
+  console.log(result.response.text());
+}
+
+run();
+
+ use the sequential thinking mcp server wherever possible
+
+
+Take the reference from the below following code to how to extract the transcript from youtube video. The below board have the transcript called text.
+
+(function(){"use strict";var te=typeof globalThis<"u"?globalThis:typeof window<"u"?window:typeof global<"u"?global:typeof self<"u"?self:{},U={exports:{}};(function(g,t){(function(r,s){g.exports=s()})(typeof self<"u"?self:te,function(){return function(e){var r={};function s(n){if(r[n])return r[n].exports;var o=r[n]={i:n,l:!1,exports:{}};return e[n].call(o.exports,o,o.exports,s),o.l=!0,o.exports}return s.m=e,s.c=r,s.d=function(n,o,a){s.o(n,o)||Object.defineProperty(n,o,{configurable:!1,enumerable:!0,get:a})},s.n=function(n){var o=n&&n.__esModule?function(){return n.default}:function(){return n};return s.d(o,"a",o),o},s.o=function(n,o){return Object.prototype.hasOwnProperty.call(n,o)},s.p="",s(s.s=3)}([function(e,r,s){function n(c,v){if(!(c instanceof v))throw new TypeError("Cannot call a class as a function")}var o=s(5),a=s(1),u=a.toHex,h=a.ceilHeapSize,p=s(6),m=function(c){for(c+=9;c%64>0;c+=1);return c},f=function(c,v){var y=new Uint8Array(c.buffer),_=v%4,w=v-_;switch(_){case 0:y[w+3]=0;case 1:y[w+2]=0;case 2:y[w+1]=0;case 3:y[w+0]=0}for(var b=(v>>2)+1;b<c.length;b++)c[b]=0},l=function(c,v,y){c[v>>2]|=128<<24-(v%4<<3),c[((v>>2)+2&-16)+14]=y/(1<<29)|0,c[((v>>2)+2&-16)+15]=y<<3},i=function(c,v){var y=new Int32Array(c,v+320,5),_=new Int32Array(5),w=new DataView(_.buffer);return w.setInt32(0,y[0],!1),w.setInt32(4,y[1],!1),w.setInt32(8,y[2],!1),w.setInt32(12,y[3],!1),w.setInt32(16,y[4],!1),_},d=function(){function c(v){if(n(this,c),v=v||64*1024,v%64>0)throw new Error("Chunk size must be a multiple of 128 bit");this._offset=0,this._maxChunkLen=v,this._padMaxChunkLen=m(v),this._heap=new ArrayBuffer(h(this._padMaxChunkLen+320+20)),this._h32=new Int32Array(this._heap),this._h8=new Int8Array(this._heap),this._core=new o({Int32Array},{},this._heap)}return c.prototype._initState=function(y,_){this._offset=0;var w=new Int32Array(y,_+320,5);w[0]=1732584193,w[1]=-271733879,w[2]=-1732584194,w[3]=271733878,w[4]=-1009589776},c.prototype._padChunk=function(y,_){var w=m(y),b=new Int32Array(this._heap,0,w>>2);return f(b,y),l(b,y,_),w},c.prototype._write=function(y,_,w,b){p(y,this._h8,this._h32,_,w,b||0)},c.prototype._coreCall=function(y,_,w,b,F){var A=w;this._write(y,_,w),F&&(A=this._padChunk(w,b)),this._core.hash(A,this._padMaxChunkLen)},c.prototype.rawDigest=function(y){var _=y.byteLength||y.length||y.size||0;this._initState(this._heap,this._padMaxChunkLen);var w=0,b=this._maxChunkLen;for(w=0;_>w+b;w+=b)this._coreCall(y,w,b,_,!1);return this._coreCall(y,w,_-w,_,!0),i(this._heap,this._padMaxChunkLen)},c.prototype.digest=function(y){return u(this.rawDigest(y).buffer)},c.prototype.digestFromString=function(y){return this.digest(y)},c.prototype.digestFromBuffer=function(y){return this.digest(y)},c.prototype.digestFromArrayBuffer=function(y){return this.digest(y)},c.prototype.resetState=function(){return this._initState(this._heap,this._padMaxChunkLen),this},c.prototype.append=function(y){var _=0,w=y.byteLength||y.length||y.size||0,b=this._offset%this._maxChunkLen,F=void 0;for(this._offset+=w;_<w;)F=Math.min(w-_,this._maxChunkLen-b),this._write(y,_,F,b),b+=F,_+=F,b===this._maxChunkLen&&(this._core.hash(this._maxChunkLen,this._padMaxChunkLen),b=0);return this},c.prototype.getState=function(){var y=this._offset%this._maxChunkLen,_=void 0;if(y)_=this._heap.slice(0);else{var w=new Int32Array(this._heap,this._padMaxChunkLen+320,5);_=w.buffer.slice(w.byteOffset,w.byteOffset+w.byteLength)}return{offset:this._offset,heap:_}},c.prototype.setState=function(y){if(this._offset=y.offset,y.heap.byteLength===20){var _=new Int32Array(this._heap,this._padMaxChunkLen+320,5);_.set(new Int32Array(y.heap))}else this._h32.set(new Int32Array(y.heap));return this},c.prototype.rawEnd=function(){var y=this._offset,_=y%this._maxChunkLen,w=this._padChunk(_,y);this._core.hash(w,this._padMaxChunkLen);var b=i(this._heap,this._padMaxChunkLen);return this._initState(this._heap,this._padMaxChunkLen),b},c.prototype.end=function(){return u(this.rawEnd().buffer)},c}();e.exports=d,e.exports._core=o},function(e,r){for(var s=new Array(256),n=0;n<256;n++)s[n]=(n<16?"0":"")+n.toString(16);e.exports.toHex=function(o){for(var a=new Uint8Array(o),u=new Array(o.byteLength),h=0;h<u.length;h++)u[h]=s[a[h]];return u.join("")},e.exports.ceilHeapSize=function(o){var a=0;if(o<=65536)return 65536;if(o<16777216)for(a=1;a<o;a=a<<1);else for(a=16777216;a<o;a+=16777216);return a},e.exports.isDedicatedWorkerScope=function(o){var a="WorkerGlobalScope"in o&&o instanceof o.WorkerGlobalScope,u="SharedWorkerGlobalScope"in o&&o instanceof o.SharedWorkerGlobalScope,h="ServiceWorkerGlobalScope"in o&&o instanceof o.ServiceWorkerGlobalScope;return a&&!u&&!h}},function(e,r,s){e.exports=function(){var n=s(0),o=function(h,p,m){try{return m(null,h.digest(p))}catch(f){return m(f)}},a=function(h,p,m,f,l){var i=new self.FileReader;i.onloadend=function(){if(i.error)return l(i.error);var c=i.result;p+=i.result.byteLength;try{h.append(c)}catch(v){l(v);return}p<f.size?a(h,p,m,f,l):l(null,h.end())},i.readAsArrayBuffer(f.slice(p,p+m))},u=!0;return self.onmessage=function(h){if(u){var p=h.data.data,m=h.data.file,f=h.data.id;if(!(typeof f>"u")&&!(!m&&!p)){var l=h.data.blockSize||4*1024*1024,i=new n(l);i.resetState();var d=function(c,v){c?self.postMessage({id:f,error:c.name}):self.postMessage({id:f,hash:v})};p&&o(i,p,d),m&&a(i,0,l,m,d)}}},function(){u=!1}}},function(e,r,s){var n=s(4),o=s(0),a=s(7),u=s(2),h=s(1),p=h.isDedicatedWorkerScope,m=typeof self<"u"&&p(self);o.disableWorkerBehaviour=m?u():function(){},o.createWorker=function(){var f=n(2),l=f.terminate;return f.terminate=function(){URL.revokeObjectURL(f.objectURL),l.call(f)},f},o.createHash=a,e.exports=o},function(e,r,s){function n(f){var l={};function i(c){if(l[c])return l[c].exports;var v=l[c]={i:c,l:!1,exports:{}};return f[c].call(v.exports,v,v.exports,i),v.l=!0,v.exports}i.m=f,i.c=l,i.i=function(c){return c},i.d=function(c,v,y){i.o(c,v)||Object.defineProperty(c,v,{configurable:!1,enumerable:!0,get:y})},i.r=function(c){Object.defineProperty(c,"__esModule",{value:!0})},i.n=function(c){var v=c&&c.__esModule?function(){return c.default}:function(){return c};return i.d(v,"a",v),v},i.o=function(c,v){return Object.prototype.hasOwnProperty.call(c,v)},i.p="/",i.oe=function(c){throw console.error(c),c};var d=i(i.s=ENTRY_MODULE);return d.default||d}var o="[\\.|\\-|\\+|\\w|/|@]+",a="\\((/\\*.*?\\*/)?s?.*?("+o+").*?\\)";function u(f){return(f+"").replace(/[.?*+^$[\]\\(){}|-]/g,"\\$&")}function h(f,l,i){var d={};d[i]=[];var c=l.toString(),v=c.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/);if(!v)return d;for(var y=v[1],_=new RegExp("(\\\\n|\\W)"+u(y)+a,"g"),w;w=_.exec(c);)w[3]!=="dll-reference"&&d[i].push(w[3]);for(_=new RegExp("\\("+u(y)+'\\("(dll-reference\\s('+o+'))"\\)\\)'+a,"g");w=_.exec(c);)f[w[2]]||(d[i].push(w[1]),f[w[2]]=s(w[1]).m),d[w[2]]=d[w[2]]||[],d[w[2]].push(w[4]);return d}function p(f){var l=Object.keys(f);return l.reduce(function(i,d){return i||f[d].length>0},!1)}function m(f,l){for(var i={main:[l]},d={main:[]},c={main:{}};p(i);)for(var v=Object.keys(i),y=0;y<v.length;y++){var _=v[y],w=i[_],b=w.pop();if(c[_]=c[_]||{},!(c[_][b]||!f[_][b])){c[_][b]=!0,d[_]=d[_]||[],d[_].push(b);for(var F=h(f,f[_][b],_),A=Object.keys(F),x=0;x<A.length;x++)i[A[x]]=i[A[x]]||[],i[A[x]]=i[A[x]].concat(F[A[x]])}}return d}e.exports=function(f,l){l=l||{};var i={main:s.m},d=l.all?{main:Object.keys(i)}:m(i,f),c="";Object.keys(d).filter(function(b){return b!=="main"}).forEach(function(b){for(var F=0;d[b][F];)F++;d[b].push(F),i[b][F]="(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })",c=c+"var "+b+" = ("+n.toString().replace("ENTRY_MODULE",JSON.stringify(F))+")({"+d[b].map(function(A){return""+JSON.stringify(A)+": "+i[b][A].toString()}).join(",")+`});
+`}),c=c+"("+n.toString().replace("ENTRY_MODULE",JSON.stringify(f))+")({"+d.main.map(function(b){return""+JSON.stringify(b)+": "+i.main[b].toString()}).join(",")+"})(self);";var v=new window.Blob([c],{type:"text/javascript"});if(l.bare)return v;var y=window.URL||window.webkitURL||window.mozURL||window.msURL,_=y.createObjectURL(v),w=new window.Worker(_);return w.objectURL=_,w}},function(e,r){e.exports=function(n,o,a){var u=new n.Int32Array(a);function h(p,m){p=p|0,m=m|0;var f=0,l=0,i=0,d=0,c=0,v=0,y=0,_=0,w=0,b=0,F=0,A=0,x=0,P=0;for(i=u[m+320>>2]|0,c=u[m+324>>2]|0,y=u[m+328>>2]|0,w=u[m+332>>2]|0,F=u[m+336>>2]|0,f=0;(f|0)<(p|0);f=f+64|0){for(d=i,v=c,_=y,b=w,A=F,l=0;(l|0)<64;l=l+4|0)P=u[f+l>>2]|0,x=((i<<5|i>>>27)+(c&y|~c&w)|0)+((P+F|0)+1518500249|0)|0,F=w,w=y,y=c<<30|c>>>2,c=i,i=x,u[p+l>>2]=P;for(l=p+64|0;(l|0)<(p+80|0);l=l+4|0)P=(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])<<1|(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])>>>31,x=((i<<5|i>>>27)+(c&y|~c&w)|0)+((P+F|0)+1518500249|0)|0,F=w,w=y,y=c<<30|c>>>2,c=i,i=x,u[l>>2]=P;for(l=p+80|0;(l|0)<(p+160|0);l=l+4|0)P=(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])<<1|(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])>>>31,x=((i<<5|i>>>27)+(c^y^w)|0)+((P+F|0)+1859775393|0)|0,F=w,w=y,y=c<<30|c>>>2,c=i,i=x,u[l>>2]=P;for(l=p+160|0;(l|0)<(p+240|0);l=l+4|0)P=(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])<<1|(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])>>>31,x=((i<<5|i>>>27)+(c&y|c&w|y&w)|0)+((P+F|0)-1894007588|0)|0,F=w,w=y,y=c<<30|c>>>2,c=i,i=x,u[l>>2]=P;for(l=p+240|0;(l|0)<(p+320|0);l=l+4|0)P=(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])<<1|(u[l-12>>2]^u[l-32>>2]^u[l-56>>2]^u[l-64>>2])>>>31,x=((i<<5|i>>>27)+(c^y^w)|0)+((P+F|0)-899497514|0)|0,F=w,w=y,y=c<<30|c>>>2,c=i,i=x,u[l>>2]=P;i=i+d|0,c=c+v|0,y=y+_|0,w=w+b|0,F=F+A|0}u[m+320>>2]=i,u[m+324>>2]=c,u[m+328>>2]=y,u[m+332>>2]=w,u[m+336>>2]=F}return{hash:h}}},function(e,r){var s=this,n=void 0;typeof self<"u"&&typeof self.FileReaderSync<"u"&&(n=new self.FileReaderSync);var o=function(h,p,m,f,l,i){var d=void 0,c=i%4,v=(l+c)%4,y=l-v;switch(c){case 0:p[i]=h.charCodeAt(f+3);case 1:p[i+1-(c<<1)|0]=h.charCodeAt(f+2);case 2:p[i+2-(c<<1)|0]=h.charCodeAt(f+1);case 3:p[i+3-(c<<1)|0]=h.charCodeAt(f)}if(!(l<v+(4-c))){for(d=4-c;d<y;d=d+4|0)m[i+d>>2]=h.charCodeAt(f+d)<<24|h.charCodeAt(f+d+1)<<16|h.charCodeAt(f+d+2)<<8|h.charCodeAt(f+d+3);switch(v){case 3:p[i+y+1|0]=h.charCodeAt(f+y+2);case 2:p[i+y+2|0]=h.charCodeAt(f+y+1);case 1:p[i+y+3|0]=h.charCodeAt(f+y)}}},a=function(h,p,m,f,l,i){var d=void 0,c=i%4,v=(l+c)%4,y=l-v;switch(c){case 0:p[i]=h[f+3];case 1:p[i+1-(c<<1)|0]=h[f+2];case 2:p[i+2-(c<<1)|0]=h[f+1];case 3:p[i+3-(c<<1)|0]=h[f]}if(!(l<v+(4-c))){for(d=4-c;d<y;d=d+4|0)m[i+d>>2|0]=h[f+d]<<24|h[f+d+1]<<16|h[f+d+2]<<8|h[f+d+3];switch(v){case 3:p[i+y+1|0]=h[f+y+2];case 2:p[i+y+2|0]=h[f+y+1];case 1:p[i+y+3|0]=h[f+y]}}},u=function(h,p,m,f,l,i){var d=void 0,c=i%4,v=(l+c)%4,y=l-v,_=new Uint8Array(n.readAsArrayBuffer(h.slice(f,f+l)));switch(c){case 0:p[i]=_[3];case 1:p[i+1-(c<<1)|0]=_[2];case 2:p[i+2-(c<<1)|0]=_[1];case 3:p[i+3-(c<<1)|0]=_[0]}if(!(l<v+(4-c))){for(d=4-c;d<y;d=d+4|0)m[i+d>>2|0]=_[d]<<24|_[d+1]<<16|_[d+2]<<8|_[d+3];switch(v){case 3:p[i+y+1|0]=_[y+2];case 2:p[i+y+2|0]=_[y+1];case 1:p[i+y+3|0]=_[y]}}};e.exports=function(h,p,m,f,l,i){if(typeof h=="string")return o(h,p,m,f,l,i);if(h instanceof Array||s&&s.Buffer&&s.Buffer.isBuffer(h))return a(h,p,m,f,l,i);if(h instanceof ArrayBuffer)return a(new Uint8Array(h),p,m,f,l,i);if(h.buffer instanceof ArrayBuffer)return a(new Uint8Array(h.buffer,h.byteOffset,h.byteLength),p,m,f,l,i);if(h instanceof Blob)return u(h,p,m,f,l,i);throw new Error("Unsupported data type.")}},function(e,r,s){var n=function(){function m(f,l){for(var i=0;i<l.length;i++){var d=l[i];d.enumerable=d.enumerable||!1,d.configurable=!0,"value"in d&&(d.writable=!0),Object.defineProperty(f,d.key,d)}}return function(f,l,i){return l&&m(f.prototype,l),i&&m(f,i),f}}();function o(m,f){if(!(m instanceof f))throw new TypeError("Cannot call a class as a function")}var a=s(0),u=s(1),h=u.toHex,p=function(){function m(){o(this,m),this._rusha=new a,this._rusha.resetState()}return m.prototype.update=function(l){return this._rusha.append(l),this},m.prototype.digest=function(l){var i=this._rusha.rawEnd().buffer;if(!l)return i;if(l==="hex")return h(i);throw new Error("unsupported digest encoding")},n(m,[{key:"state",get:function(){return this._rusha.getState()},set:function(f){this._rusha.setState(f)}}]),m}();e.exports=function(){return new p}}])})})(U);var re=U.exports,ne="4.0.0",C;(function(g){g.AnonymousId="anonymous_id",g.DistinctId="distinct_id",g.Props="props",g.FeatureFlags="feature_flags",g.FeatureFlagPayloads="feature_flag_payloads",g.OverrideFeatureFlags="override_feature_flags",g.Queue="queue",g.OptedOut="opted_out",g.SessionId="session_id",g.SessionLastTimestamp="session_timestamp",g.PersonProperties="person_properties",g.GroupProperties="group_properties",g.InstalledAppBuild="installed_app_build",g.InstalledAppVersion="installed_app_version"})(C||(C={}));function ie(g,t){if(!g)throw new Error(t)}function se(g){return g==null?void 0:g.replace(/\/+$/,"")}async function ae(g,t){let e=null;for(let r=0;r<t.retryCount+1;r++){r>0&&await new Promise(s=>setTimeout(s,t.retryDelay));try{return await g()}catch(s){if(e=s,!t.retryCheck(s))throw s}}throw e}function oe(){return new Date().getTime()}function j(){return new Date().toISOString()}function G(g,t){const e=setTimeout(g,t);return e!=null&&e.unref&&(e==null||e.unref()),e}const k=String.fromCharCode,z="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",M={};function ue(g,t){if(!M[g]){M[g]={};for(let e=0;e<g.length;e++)M[g][g.charAt(e)]=e}return M[g][t]}const L={compressToBase64:function(g){if(g==null)return"";const t=L._compress(g,6,function(e){return z.charAt(e)});switch(t.length%4){default:case 0:return t;case 1:return t+"===";case 2:return t+"==";case 3:return t+"="}},decompressFromBase64:function(g){return g==null?"":g==""?null:L._decompress(g.length,32,function(t){return ue(z,g.charAt(t))})},compress:function(g){return L._compress(g,16,function(t){return k(t)})},_compress:function(g,t,e){if(g==null)return"";const r={},s={},n=[];let o,a,u="",h="",p="",m=2,f=3,l=2,i=0,d=0,c;for(c=0;c<g.length;c+=1)if(u=g.charAt(c),Object.prototype.hasOwnProperty.call(r,u)||(r[u]=f++,s[u]=!0),h=p+u,Object.prototype.hasOwnProperty.call(r,h))p=h;else{if(Object.prototype.hasOwnProperty.call(s,p)){if(p.charCodeAt(0)<256){for(o=0;o<l;o++)i=i<<1,d==t-1?(d=0,n.push(e(i)),i=0):d++;for(a=p.charCodeAt(0),o=0;o<8;o++)i=i<<1|a&1,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=a>>1}else{for(a=1,o=0;o<l;o++)i=i<<1|a,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=0;for(a=p.charCodeAt(0),o=0;o<16;o++)i=i<<1|a&1,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=a>>1}m--,m==0&&(m=Math.pow(2,l),l++),delete s[p]}else for(a=r[p],o=0;o<l;o++)i=i<<1|a&1,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=a>>1;m--,m==0&&(m=Math.pow(2,l),l++),r[h]=f++,p=String(u)}if(p!==""){if(Object.prototype.hasOwnProperty.call(s,p)){if(p.charCodeAt(0)<256){for(o=0;o<l;o++)i=i<<1,d==t-1?(d=0,n.push(e(i)),i=0):d++;for(a=p.charCodeAt(0),o=0;o<8;o++)i=i<<1|a&1,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=a>>1}else{for(a=1,o=0;o<l;o++)i=i<<1|a,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=0;for(a=p.charCodeAt(0),o=0;o<16;o++)i=i<<1|a&1,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=a>>1}m--,m==0&&(m=Math.pow(2,l),l++),delete s[p]}else for(a=r[p],o=0;o<l;o++)i=i<<1|a&1,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=a>>1;m--,m==0&&(m=Math.pow(2,l),l++)}for(a=2,o=0;o<l;o++)i=i<<1|a&1,d==t-1?(d=0,n.push(e(i)),i=0):d++,a=a>>1;for(;;)if(i=i<<1,d==t-1){n.push(e(i));break}else d++;return n.join("")},decompress:function(g){return g==null?"":g==""?null:L._decompress(g.length,32768,function(t){return g.charCodeAt(t)})},_decompress:function(g,t,e){const r=[],s=[],n={val:e(0),position:t,index:1};let o=4,a=4,u=3,h="",p,m,f,l,i,d,c;for(p=0;p<3;p+=1)r[p]=p;for(f=0,i=Math.pow(2,2),d=1;d!=i;)l=n.val&n.position,n.position>>=1,n.position==0&&(n.position=t,n.val=e(n.index++)),f|=(l>0?1:0)*d,d<<=1;switch(f){case 0:for(f=0,i=Math.pow(2,8),d=1;d!=i;)l=n.val&n.position,n.position>>=1,n.position==0&&(n.position=t,n.val=e(n.index++)),f|=(l>0?1:0)*d,d<<=1;c=k(f);break;case 1:for(f=0,i=Math.pow(2,16),d=1;d!=i;)l=n.val&n.position,n.position>>=1,n.position==0&&(n.position=t,n.val=e(n.index++)),f|=(l>0?1:0)*d,d<<=1;c=k(f);break;case 2:return""}for(r[3]=c,m=c,s.push(c);;){if(n.index>g)return"";for(f=0,i=Math.pow(2,u),d=1;d!=i;)l=n.val&n.position,n.position>>=1,n.position==0&&(n.position=t,n.val=e(n.index++)),f|=(l>0?1:0)*d,d<<=1;switch(c=f){case 0:for(f=0,i=Math.pow(2,8),d=1;d!=i;)l=n.val&n.position,n.position>>=1,n.position==0&&(n.position=t,n.val=e(n.index++)),f|=(l>0?1:0)*d,d<<=1;r[a++]=k(f),c=a-1,o--;break;case 1:for(f=0,i=Math.pow(2,16),d=1;d!=i;)l=n.val&n.position,n.position>>=1,n.position==0&&(n.position=t,n.val=e(n.index++)),f|=(l>0?1:0)*d,d<<=1;r[a++]=k(f),c=a-1,o--;break;case 2:return s.join("")}if(o==0&&(o=Math.pow(2,u),u++),r[c])h=r[c];else if(c===a)h=m+m.charAt(0);else return null;s.push(h),r[a++]=m+h.charAt(0),o--,m=h,o==0&&(o=Math.pow(2,u),u++)}}};class le{constructor(){this.events={},this.events={}}on(t,e){return this.events[t]||(this.events[t]=[]),this.events[t].push(e),()=>{this.events[t]=this.events[t].filter(r=>r!==e)}}emit(t,e){for(const r of this.events[t]||[])r(e);for(const r of this.events["*"]||[])r(t,e)}}/**
+ * uuidv7: An experimental implementation of the proposed UUID Version 7
+ *
+ * @license Apache-2.0
+ * @copyright 2021-2023 LiosK
+ * @packageDocumentation
+ */const T="0123456789abcdef";class O{constructor(t){this.bytes=t}static ofInner(t){if(t.length!==16)throw new TypeError("not 128-bit length");return new O(t)}static fromFieldsV7(t,e,r,s){if(!Number.isInteger(t)||!Number.isInteger(e)||!Number.isInteger(r)||!Number.isInteger(s)||t<0||e<0||r<0||s<0||t>0xffffffffffff||e>4095||r>1073741823||s>4294967295)throw new RangeError("invalid field value");const n=new Uint8Array(16);return n[0]=t/2**40,n[1]=t/2**32,n[2]=t/2**24,n[3]=t/2**16,n[4]=t/2**8,n[5]=t,n[6]=112|e>>>8,n[7]=e,n[8]=128|r>>>24,n[9]=r>>>16,n[10]=r>>>8,n[11]=r,n[12]=s>>>24,n[13]=s>>>16,n[14]=s>>>8,n[15]=s,new O(n)}static parse(t){var r,s,n,o;let e;switch(t.length){case 32:e=(r=/^[0-9a-f]{32}$/i.exec(t))==null?void 0:r[0];break;case 36:e=(s=/^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/i.exec(t))==null?void 0:s.slice(1,6).join("");break;case 38:e=(n=/^\{([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})\}$/i.exec(t))==null?void 0:n.slice(1,6).join("");break;case 45:e=(o=/^urn:uuid:([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/i.exec(t))==null?void 0:o.slice(1,6).join("");break}if(e){const a=new Uint8Array(16);for(let u=0;u<16;u+=4){const h=parseInt(e.substring(2*u,2*u+8),16);a[u+0]=h>>>24,a[u+1]=h>>>16,a[u+2]=h>>>8,a[u+3]=h}return new O(a)}else throw new SyntaxError("could not parse UUID string")}toString(){let t="";for(let e=0;e<this.bytes.length;e++)t+=T.charAt(this.bytes[e]>>>4),t+=T.charAt(this.bytes[e]&15),(e===3||e===5||e===7||e===9)&&(t+="-");return t}toHex(){let t="";for(let e=0;e<this.bytes.length;e++)t+=T.charAt(this.bytes[e]>>>4),t+=T.charAt(this.bytes[e]&15);return t}toJSON(){return this.toString()}getVariant(){const t=this.bytes[8]>>>4;if(t<0)throw new Error("unreachable");if(t<=7)return this.bytes.every(e=>e===0)?"NIL":"VAR_0";if(t<=11)return"VAR_10";if(t<=13)return"VAR_110";if(t<=15)return this.bytes.every(e=>e===255)?"MAX":"VAR_RESERVED";throw new Error("unreachable")}getVersion(){return this.getVariant()==="VAR_10"?this.bytes[6]>>>4:void 0}clone(){return new O(this.bytes.slice(0))}equals(t){return this.compareTo(t)===0}compareTo(t){for(let e=0;e<16;e++){const r=this.bytes[e]-t.bytes[e];if(r!==0)return Math.sign(r)}return 0}}class ce{constructor(t){this.timestamp=0,this.counter=0,this.random=t??fe()}generate(){return this.generateOrResetCore(Date.now(),1e4)}generateOrAbort(){return this.generateOrAbortCore(Date.now(),1e4)}generateOrResetCore(t,e){let r=this.generateOrAbortCore(t,e);return r===void 0&&(this.timestamp=0,r=this.generateOrAbortCore(t,e)),r}generateOrAbortCore(t,e){if(!Number.isInteger(t)||t<1||t>0xffffffffffff)throw new RangeError("`unixTsMs` must be a 48-bit positive integer");if(e<0||e>0xffffffffffff)throw new RangeError("`rollbackAllowance` out of reasonable range");if(t>this.timestamp)this.timestamp=t,this.resetCounter();else if(t+e>=this.timestamp)this.counter++,this.counter>4398046511103&&(this.timestamp++,this.resetCounter());else return;return O.fromFieldsV7(this.timestamp,Math.trunc(this.counter/2**30),this.counter&2**30-1,this.random.nextUint32())}resetCounter(){this.counter=this.random.nextUint32()*1024+(this.random.nextUint32()&1023)}generateV4(){const t=new Uint8Array(Uint32Array.of(this.random.nextUint32(),this.random.nextUint32(),this.random.nextUint32(),this.random.nextUint32()).buffer);return t[6]=64|t[6]>>>4,t[8]=128|t[8]>>>2,O.ofInner(t)}}const fe=()=>({nextUint32:()=>Math.trunc(Math.random()*65536)*65536+Math.trunc(Math.random()*65536)});let B;const W=()=>he().toString(),he=()=>(B||(B=new ce)).generate();class N extends Error{constructor(t){super("HTTP error while fetching PostHog: "+t.status),this.response=t,this.name="PostHogFetchHttpError"}}class I extends Error{constructor(t){super("Network error while fetching PostHog",t instanceof Error?{cause:t}:{}),this.error=t,this.name="PostHogFetchNetworkError"}}function Q(g){return typeof g=="object"&&(g instanceof N||g instanceof I)}class de{constructor(t,e){this.flushPromise=null,this.disableGeoip=!0,this.disabled=!1,this.defaultOptIn=!0,this.pendingPromises={},this._events=new le,this._isInitialized=!1,ie(t,"You must pass your PostHog project's api key."),this.apiKey=t,this.host=se((e==null?void 0:e.host)||"https://app.posthog.com"),this.flushAt=e!=null&&e.flushAt?Math.max(e==null?void 0:e.flushAt,1):20,this.maxBatchSize=Math.max(this.flushAt,(e==null?void 0:e.maxBatchSize)??100),this.maxQueueSize=Math.max(this.flushAt,(e==null?void 0:e.maxQueueSize)??1e3),this.flushInterval=(e==null?void 0:e.flushInterval)??1e4,this.captureMode=(e==null?void 0:e.captureMode)||"form",this.defaultOptIn=(e==null?void 0:e.defaultOptIn)??!0,this._retryOptions={retryCount:(e==null?void 0:e.fetchRetryCount)??3,retryDelay:(e==null?void 0:e.fetchRetryDelay)??3e3,retryCheck:Q},this.requestTimeout=(e==null?void 0:e.requestTimeout)??1e4,this.featureFlagsRequestTimeoutMs=(e==null?void 0:e.featureFlagsRequestTimeoutMs)??3e3,this.disableGeoip=(e==null?void 0:e.disableGeoip)??!0,this.disabled=(e==null?void 0:e.disabled)??!1,this._initPromise=Promise.resolve(),this._isInitialized=!0}wrap(t){if(this.disabled){this.isDebug&&console.warn("[PostHog] The client is disabled");return}if(this._isInitialized)return t();this._initPromise.then(()=>t())}getCommonEventProperties(){return{$lib:this.getLibraryId(),$lib_version:this.getLibraryVersion()}}get optedOut(){return this.getPersistedProperty(C.OptedOut)??!this.defaultOptIn}async optIn(){this.wrap(()=>{this.setPersistedProperty(C.OptedOut,!1)})}async optOut(){this.wrap(()=>{this.setPersistedProperty(C.OptedOut,!0)})}on(t,e){return this._events.on(t,e)}debug(t=!0){var e;if((e=this.removeDebugCallback)==null||e.call(this),t){const r=this.on("*",(s,n)=>console.log("PostHog Debug",s,n));this.removeDebugCallback=()=>{r(),this.removeDebugCallback=void 0}}}get isDebug(){return!!this.removeDebugCallback}buildPayload(t){return{distinct_id:t.distinct_id,event:t.event,properties:{...t.properties||{},...this.getCommonEventProperties()}}}addPendingPromise(t){const e=W();return this.pendingPromises[e]=t,t.catch(()=>{}).finally(()=>{delete this.pendingPromises[e]}),t}identifyStateless(t,e,r){this.wrap(()=>{const s={...this.buildPayload({distinct_id:t,event:"$identify",properties:e})};this.enqueue("identify",s,r)})}captureStateless(t,e,r,s){this.wrap(()=>{const n=this.buildPayload({distinct_id:t,event:e,properties:r});this.enqueue("capture",n,s)})}aliasStateless(t,e,r,s){this.wrap(()=>{const n=this.buildPayload({event:"$create_alias",distinct_id:e,properties:{...r||{},distinct_id:e,alias:t}});this.enqueue("alias",n,s)})}groupIdentifyStateless(t,e,r,s,n,o){this.wrap(()=>{const a=this.buildPayload({distinct_id:n||`$${t}_${e}`,event:"$groupidentify",properties:{$group_type:t,$group_key:e,$group_set:r||{},...o||{}}});this.enqueue("capture",a,s)})}async getDecide(t,e={},r={},s={},n={}){await this._initPromise;const o=`${this.host}/decide/?v=3`,a={method:"POST",headers:{...this.getCustomHeaders(),"Content-Type":"application/json"},body:JSON.stringify({token:this.apiKey,distinct_id:t,groups:e,person_properties:r,group_properties:s,...n})};return this.fetchWithRetry(o,a,{retryCount:0},this.featureFlagsRequestTimeoutMs).then(u=>u.json()).catch(u=>{this._events.emit("error",u)})}async getFeatureFlagStateless(t,e,r={},s={},n={},o){await this._initPromise;const a=await this.getFeatureFlagsStateless(e,r,s,n,o);if(!a)return;let u=a[t];return u===void 0&&(u=!1),u}async getFeatureFlagPayloadStateless(t,e,r={},s={},n={},o){await this._initPromise;const a=await this.getFeatureFlagPayloadsStateless(e,r,s,n,o);if(!a)return;const u=a[t];return u===void 0?null:this._parsePayload(u)}async getFeatureFlagPayloadsStateless(t,e={},r={},s={},n){await this._initPromise;const o=(await this.getFeatureFlagsAndPayloadsStateless(t,e,r,s,n)).payloads;return o&&Object.fromEntries(Object.entries(o).map(([a,u])=>[a,this._parsePayload(u)]))}_parsePayload(t){try{return JSON.parse(t)}catch{return t}}async getFeatureFlagsStateless(t,e={},r={},s={},n){return await this._initPromise,(await this.getFeatureFlagsAndPayloadsStateless(t,e,r,s,n)).flags}async getFeatureFlagsAndPayloadsStateless(t,e={},r={},s={},n){await this._initPromise;const o={};(n??this.disableGeoip)&&(o.geoip_disable=!0);const a=await this.getDecide(t,e,r,s,o),u=a==null?void 0:a.featureFlags,h=a==null?void 0:a.featureFlagPayloads;return{flags:u,payloads:h}}enqueue(t,e,r){this.wrap(()=>{if(this.optedOut){this._events.emit(t,"Library is disabled. Not sending event. To re-enable, call posthog.optIn()");return}const s={...e,type:t,library:this.getLibraryId(),library_version:this.getLibraryVersion(),timestamp:r!=null&&r.timestamp?r==null?void 0:r.timestamp:j(),uuid:r!=null&&r.uuid?r.uuid:W()};((r==null?void 0:r.disableGeoip)??this.disableGeoip)&&(s.properties||(s.properties={}),s.properties.$geoip_disable=!0),s.distinctId&&(s.distinct_id=s.distinctId,delete s.distinctId);const o=this.getPersistedProperty(C.Queue)||[];o.length>=this.maxQueueSize&&(o.shift(),console.info("Queue is full, the oldest event is dropped.")),o.push({message:s}),this.setPersistedProperty(C.Queue,o),this._events.emit(t,s),o.length>=this.flushAt&&this.flushBackground(),this.flushInterval&&!this._flushTimer&&(this._flushTimer=G(()=>this.flushBackground(),this.flushInterval))})}clearFlushTimer(){this._flushTimer&&(clearTimeout(this._flushTimer),this._flushTimer=void 0)}flushBackground(){this.flush().catch(()=>{})}async flush(){return this.flushPromise||(this.flushPromise=this._flush().finally(()=>{this.flushPromise=null}),this.addPendingPromise(this.flushPromise)),this.flushPromise}getCustomHeaders(){const t=this.getCustomUserAgent(),e={};return t&&t!==""&&(e["User-Agent"]=t),e}async _flush(){this.clearFlushTimer(),await this._initPromise;const t=this.getPersistedProperty(C.Queue)||[];if(!t.length)return[];const e=t.slice(0,this.maxBatchSize),r=e.map(h=>h.message),s=()=>{const h=this.getPersistedProperty(C.Queue)||[];this.setPersistedProperty(C.Queue,h.slice(e.length))},n={api_key:this.apiKey,batch:r,sent_at:j()},o=JSON.stringify(n),a=this.captureMode==="form"?`${this.host}/e/?ip=1&_=${oe()}&v=${this.getLibraryVersion()}`:`${this.host}/batch/`,u=this.captureMode==="form"?{method:"POST",mode:"no-cors",credentials:"omit",headers:{...this.getCustomHeaders(),"Content-Type":"application/x-www-form-urlencoded"},body:`data=${encodeURIComponent(L.compressToBase64(o))}&compression=lz64`}:{method:"POST",headers:{...this.getCustomHeaders(),"Content-Type":"application/json"},body:o};try{await this.fetchWithRetry(a,u)}catch(h){throw h instanceof I||s(),this._events.emit("error",h),h}return s(),this._events.emit("flush",r),r}async fetchWithRetry(t,e,r,s){var n;return(n=AbortSignal).timeout??(n.timeout=function(a){const u=new AbortController;return setTimeout(()=>u.abort(),a),u.signal}),await ae(async()=>{let o=null;try{o=await this.fetch(t,{signal:AbortSignal.timeout(s??this.requestTimeout),...e})}catch(u){throw new I(u)}if(!(e.mode==="no-cors")&&(o.status<200||o.status>=400))throw new N(o);return o},{...this._retryOptions,...r})}async shutdown(t=3e4){await this._initPromise,this.clearFlushTimer();try{await Promise.all(Object.values(this.pendingPromises));const e=Date.now()+t;for(;(this.getPersistedProperty(C.Queue)||[]).length!==0;){await this.flush();const s=Date.now();if(e<s)break}}catch(e){if(!Q(e))throw e;console.error("Error while shutting down PostHog",e)}}}class pe{constructor(){this._memoryStorage={}}getProperty(t){return this._memoryStorage[t]}setProperty(t,e){this._memoryStorage[t]=e!==null?e:void 0}}let R=typeof fetch<"u"?fetch:typeof global.fetch<"u"?global.fetch:void 0;if(!R){const g=require("axios");R=async(t,e)=>{const r=await g.request({url:t,headers:e.headers,method:e.method.toLowerCase(),data:e.body,signal:e.signal,validateStatus:()=>!0});return{status:r.status,text:async()=>r.data,json:async()=>r.data}}}var V=R;const ge=1152921504606847e3;class D extends Error{constructor(t){super(),Error.captureStackTrace(this,this.constructor),this.name="ClientError",this.message=t,Object.setPrototypeOf(this,D.prototype)}}class S extends Error{constructor(t){super(t),this.name=this.constructor.name,Error.captureStackTrace(this,this.constructor),Object.setPrototypeOf(this,S.prototype)}}class ye{constructor({pollingInterval:t,personalApiKey:e,projectApiKey:r,timeout:s,host:n,customHeaders:o,...a}){this.debugMode=!1,this.pollingInterval=t,this.personalApiKey=e,this.featureFlags=[],this.featureFlagsByKey={},this.groupTypeMapping={},this.cohorts={},this.loadedSuccessfullyOnce=!1,this.timeout=s,this.projectApiKey=r,this.host=n,this.poller=void 0,this.fetch=a.fetch||V,this.onError=a.onError,this.customHeaders=o,this.loadFeatureFlags()}debug(t=!0){this.debugMode=t}async getFeatureFlag(t,e,r={},s={},n={}){var u;await this.loadFeatureFlags();let o,a;if(!this.loadedSuccessfullyOnce)return o;for(const h of this.featureFlags)if(t===h.key){a=h;break}if(a!==void 0)try{o=this.computeFlagLocally(a,e,r,s,n),this.debugMode&&console.debug(`Successfully computed flag locally: ${t} -> ${o}`)}catch(h){h instanceof S?this.debugMode&&console.debug(`InconclusiveMatchError when computing flag locally: ${t}: ${h}`):h instanceof Error&&((u=this.onError)==null||u.call(this,new Error(`Error computing flag locally: ${t}: ${h}`)))}return o}async computeFeatureFlagPayloadLocally(t,e){var s,n,o,a,u,h,p,m;await this.loadFeatureFlags();let r;if(this.loadedSuccessfullyOnce)return typeof e=="boolean"?r=(a=(o=(n=(s=this.featureFlagsByKey)==null?void 0:s[t])==null?void 0:n.filters)==null?void 0:o.payloads)==null?void 0:a[e.toString()]:typeof e=="string"&&(r=(m=(p=(h=(u=this.featureFlagsByKey)==null?void 0:u[t])==null?void 0:h.filters)==null?void 0:p.payloads)==null?void 0:m[e]),r===void 0?null:r}async getAllFlagsAndPayloads(t,e={},r={},s={}){await this.loadFeatureFlags();const n={},o={};let a=this.featureFlags.length==0;return this.featureFlags.map(async u=>{var h;try{const p=this.computeFlagLocally(u,t,e,r,s);n[u.key]=p;const m=await this.computeFeatureFlagPayloadLocally(u.key,p);m&&(o[u.key]=m)}catch(p){p instanceof S||p instanceof Error&&((h=this.onError)==null||h.call(this,new Error(`Error computing flag locally: ${u.key}: ${p}`))),a=!0}}),{response:n,payloads:o,fallbackToDecide:a}}computeFlagLocally(t,e,r={},s={},n={}){if(t.ensure_experience_continuity)throw new S("Flag has experience continuity enabled");if(!t.active)return!1;const a=(t.filters||{}).aggregation_group_type_index;if(a!=null){const u=this.groupTypeMapping[String(a)];if(!u)throw this.debugMode&&console.warn(`[FEATURE FLAGS] Unknown group type index ${a} for feature flag ${t.key}`),new S("Flag has unknown group type index");if(!(u in r))return this.debugMode&&console.warn(`[FEATURE FLAGS] Can't compute group feature flag: ${t.key} without group names passed in`),!1;const h=n[u];return this.matchFeatureFlagProperties(t,r[u],h)}else return this.matchFeatureFlagProperties(t,e,s)}matchFeatureFlagProperties(t,e,r){var h;const s=t.filters||{},n=s.groups||[];let o=!1,a;const u=[...n].sort((p,m)=>{const f=!!p.variant,l=!!m.variant;return f&&l?0:f?-1:l?1:0});for(const p of u)try{if(this.isConditionMatch(t,e,p,r)){const m=p.variant,f=((h=s.multivariate)==null?void 0:h.variants)||[];m&&f.some(l=>l.key===m)?a=m:a=this.getMatchingVariant(t,e)||!0;break}}catch(m){if(m instanceof S)o=!0;else throw m}if(a!==void 0)return a;if(o)throw new S("Can't determine if feature flag is enabled or not with given properties");return!1}isConditionMatch(t,e,r,s){const n=r.rollout_percentage;if((r.properties||[]).length>0){for(const o of r.properties){const a=o.type;let u=!1;if(a==="cohort"?u=H(o,s,this.cohorts):u=q(o,s),!u)return!1}if(n==null)return!0}return!(n!=null&&Y(t.key,e)>n/100)}getMatchingVariant(t,e){const r=Y(t.key,e,"variant"),s=this.variantLookupTable(t).find(n=>r>=n.valueMin&&r<n.valueMax);if(s)return s.key}variantLookupTable(t){var a;const e=[];let r=0,s=0;return(((a=(t.filters||{}).multivariate)==null?void 0:a.variants)||[]).forEach(u=>{s=r+u.rollout_percentage/100,e.push({valueMin:r,valueMax:s,key:u.key}),r=s}),e}async loadFeatureFlags(t=!1){(!this.loadedSuccessfullyOnce||t)&&await this._loadFeatureFlags()}async _loadFeatureFlags(){var t,e;this.poller&&(clearTimeout(this.poller),this.poller=void 0),this.poller=setTimeout(()=>this._loadFeatureFlags(),this.pollingInterval);try{const r=await this._requestFeatureFlagDefinitions();if(r&&r.status===401)throw new D("Your personalApiKey is invalid. Are you sure you're not using your Project API key? More information: https://posthog.com/docs/api/overview");if(r&&r.status!==200)return;const s=await r.json();"flags"in s||(t=this.onError)==null||t.call(this,new Error(`Invalid response when getting feature flags: ${JSON.stringify(s)}`)),this.featureFlags=s.flags||[],this.featureFlagsByKey=this.featureFlags.reduce((n,o)=>(n[o.key]=o,n),{}),this.groupTypeMapping=s.group_type_mapping||{},this.cohorts=s.cohorts||[],this.loadedSuccessfullyOnce=!0}catch(r){r instanceof D&&((e=this.onError)==null||e.call(this,r))}}async _requestFeatureFlagDefinitions(){const t=`${this.host}/api/feature_flag/local_evaluation?token=${this.projectApiKey}&send_cohorts`,e={method:"GET",headers:{...this.customHeaders,"Content-Type":"application/json",Authorization:`Bearer ${this.personalApiKey}`}};let r=null;if(this.timeout&&typeof this.timeout=="number"){const s=new AbortController;r=G(()=>{s.abort()},this.timeout),e.signal=s.signal}try{return await this.fetch(t,e)}finally{clearTimeout(r)}}stopPoller(){clearTimeout(this.poller)}}function Y(g,t,e=""){const r=re.createHash();return r.update(`${g}.${t}${e}`),parseInt(r.digest("hex").slice(0,15),16)/ge}function q(g,t){const e=g.key,r=g.value,s=g.operator||"exact";if(e in t){if(s==="is_not_set")throw new S("Operator is_not_set is not supported")}else throw new S(`Property ${e} not found in propertyValues`);const n=t[e];function o(u,h){return Array.isArray(u)?u.map(p=>String(p).toLowerCase()).includes(String(h).toLowerCase()):String(u).toLowerCase()===String(h).toLowerCase()}function a(u,h,p){if(p==="gt")return u>h;if(p==="gte")return u>=h;if(p==="lt")return u<h;if(p==="lte")return u<=h;throw new Error(`Invalid operator: ${p}`)}switch(s){case"exact":return o(r,n);case"is_not":return!o(r,n);case"is_set":return e in t;case"icontains":return String(n).toLowerCase().includes(String(r).toLowerCase());case"not_icontains":return!String(n).toLowerCase().includes(String(r).toLowerCase());case"regex":return K(String(r))&&String(n).match(String(r))!==null;case"not_regex":return K(String(r))&&String(n).match(String(r))===null;case"gt":case"gte":case"lt":case"lte":{let u=typeof r=="number"?r:null;if(typeof r=="string")try{u=parseFloat(r)}catch{}return u!=null&&n!=null?typeof n=="string"?a(n,String(r),s):a(n,u,s):a(String(n),String(r),s)}case"is_date_after":case"is_date_before":{let u=me(String(r));if(u==null&&(u=X(r)),u==null)throw new S(`Invalid date: ${r}`);const h=X(n);return["is_date_before"].includes(s)?h<u:h>u}default:throw new S(`Unknown operator: ${s}`)}}function H(g,t,e){const r=String(g.value);if(!(r in e))throw new S("can't match cohort without a given cohort property value");const s=e[r];return J(s,t,e)}function J(g,t,e){if(!g)return!0;const r=g.type,s=g.values;if(!s||s.length===0)return!0;let n=!1;if("values"in s[0]){for(const o of s)try{const a=J(o,t,e);if(r==="AND"){if(!a)return!1}else if(a)return!0}catch(a){if(a instanceof S)console.debug(`Failed to compute property ${o} locally: ${a}`),n=!0;else throw a}if(n)throw new S("Can't match cohort without a given cohort property value");return r==="AND"}else{for(const o of s)try{let a;o.type==="cohort"?a=H(o,t,e):a=q(o,t);const u=o.negation||!1;if(r==="AND"){if(!a&&!u||a&&u)return!1}else if(a&&!u||!a&&u)return!0}catch(a){if(a instanceof S)console.debug(`Failed to compute property ${o} locally: ${a}`),n=!0;else throw a}if(n)throw new S("can't match cohort without a given cohort property value");return r==="AND"}}function K(g){try{return new RegExp(g),!0}catch{return!1}}function X(g){if(g instanceof Date)return g;if(typeof g=="string"||typeof g=="number"){const t=new Date(g);if(!isNaN(t.valueOf()))return t;throw new S(`${g} is in an invalid date format`)}else throw new S(`The date provided ${g} must be a string, number, or date object`)}function me(g){const t=/^-?(?<number>[0-9]+)(?<interval>[a-z])$/,e=g.match(t),r=new Date(new Date().toISOString());if(e){if(!e.groups)return null;const s=parseInt(e.groups.number);if(s>=1e4)return null;const n=e.groups.interval;if(n=="h")r.setUTCHours(r.getUTCHours()-s);else if(n=="d")r.setUTCDate(r.getUTCDate()-s);else if(n=="w")r.setUTCDate(r.getUTCDate()-s*7);else if(n=="m")r.setUTCMonth(r.getUTCMonth()-s);else if(n=="y")r.setUTCFullYear(r.getUTCFullYear()-s);else return null;return r}else return null}const we=30*1e3,ve=50*1e3;class _e extends de{constructor(t,e={}){e.captureMode=(e==null?void 0:e.captureMode)||"json",super(t,e),this._memoryStorage=new pe,this.options=e,e.personalApiKey&&(this.featureFlagsPoller=new ye({pollingInterval:typeof e.featureFlagsPollingInterval=="number"?e.featureFlagsPollingInterval:we,personalApiKey:e.personalApiKey,projectApiKey:t,timeout:e.requestTimeout??1e4,host:this.host,fetch:e.fetch,onError:r=>{this._events.emit("error",r)},customHeaders:this.getCustomHeaders()})),this.distinctIdHasSentFlagCalls={},this.maxCacheSize=e.maxCacheSize||ve}getPersistedProperty(t){return this._memoryStorage.getProperty(t)}setPersistedProperty(t,e){return this._memoryStorage.setProperty(t,e)}fetch(t,e){return this.options.fetch?this.options.fetch(t,e):V(t,e)}getLibraryId(){return"posthog-node"}getLibraryVersion(){return ne}getCustomUserAgent(){return`${this.getLibraryId()}/${this.getLibraryVersion()}`}enable(){return super.optIn()}disable(){return super.optOut()}debug(t=!0){var e;super.debug(t),(e=this.featureFlagsPoller)==null||e.debug(t)}capture({distinctId:t,event:e,properties:r,groups:s,sendFeatureFlags:n,timestamp:o,disableGeoip:a,uuid:u}){const h=f=>{super.captureStateless(t,e,f,{timestamp:o,disableGeoip:a,uuid:u})},p=(f,l,i)=>super.getFeatureFlagsStateless(f,l,void 0,void 0,i),m=Promise.resolve().then(async()=>{var f,l;if(n)return await p(t,s,a);if((((l=(f=this.featureFlagsPoller)==null?void 0:f.featureFlags)==null?void 0:l.length)||0)>0){const i={};for(const[d,c]of Object.entries(s||{}))i[d]=String(c);return await this.getAllFlags(t,{groups:i,disableGeoip:a,onlyEvaluateLocally:!0})}return{}}).then(f=>{const l={};if(f)for(const[d,c]of Object.entries(f))l[`$feature/${d}`]=c;const i=Object.keys(f||{}).filter(d=>(f==null?void 0:f[d])!==!1);return i.length>0&&(l.$active_feature_flags=i),l}).catch(()=>({})).then(f=>{h({...f,...r,$groups:s})});this.addPendingPromise(m)}identify({distinctId:t,properties:e,disableGeoip:r}){const s=(e==null?void 0:e.$set)||e;super.identifyStateless(t,{$set:s},{disableGeoip:r})}alias(t){super.aliasStateless(t.alias,t.distinctId,void 0,{disableGeoip:t.disableGeoip})}async getFeatureFlag(t,e,r){var i;const{groups:s,disableGeoip:n}=r||{};let{onlyEvaluateLocally:o,sendFeatureFlagEvents:a,personProperties:u,groupProperties:h}=r||{};const p=this.addLocalPersonAndGroupProperties(e,s,u,h);u=p.allPersonProperties,h=p.allGroupProperties,o==null&&(o=!1),a==null&&(a=!0);let m=await((i=this.featureFlagsPoller)==null?void 0:i.getFeatureFlag(t,e,s,u,h));const f=m!==void 0;!f&&!o&&(m=await super.getFeatureFlagStateless(t,e,s,u,h,n));const l=`${t}_${m}`;return a&&(!(e in this.distinctIdHasSentFlagCalls)||!this.distinctIdHasSentFlagCalls[e].includes(l))&&(Object.keys(this.distinctIdHasSentFlagCalls).length>=this.maxCacheSize&&(this.distinctIdHasSentFlagCalls={}),Array.isArray(this.distinctIdHasSentFlagCalls[e])?this.distinctIdHasSentFlagCalls[e].push(l):this.distinctIdHasSentFlagCalls[e]=[l],this.capture({distinctId:e,event:"$feature_flag_called",properties:{$feature_flag:t,$feature_flag_response:m,locally_evaluated:f,[`$feature/${t}`]:m},groups:s,disableGeoip:n})),m}async getFeatureFlagPayload(t,e,r,s){var i;const{groups:n,disableGeoip:o}=s||{};let{onlyEvaluateLocally:a,sendFeatureFlagEvents:u,personProperties:h,groupProperties:p}=s||{};const m=this.addLocalPersonAndGroupProperties(e,n,h,p);h=m.allPersonProperties,p=m.allGroupProperties;let f;r||(r=await this.getFeatureFlag(t,e,{...s,onlyEvaluateLocally:!0})),r&&(f=await((i=this.featureFlagsPoller)==null?void 0:i.computeFeatureFlagPayloadLocally(t,r))),a==null&&(a=!1),u==null&&(u=!0),a==null&&(a=!1),!(f!==void 0)&&!a&&(f=await super.getFeatureFlagPayloadStateless(t,e,n,h,p,o));try{return JSON.parse(f)}catch{return f}}async isFeatureEnabled(t,e,r){const s=await this.getFeatureFlag(t,e,r);if(s!==void 0)return!!s||!1}async getAllFlags(t,e){return(await this.getAllFlagsAndPayloads(t,e)).featureFlags}async getAllFlagsAndPayloads(t,e){var l;const{groups:r,disableGeoip:s}=e||{};let{onlyEvaluateLocally:n,personProperties:o,groupProperties:a}=e||{};const u=this.addLocalPersonAndGroupProperties(t,r,o,a);o=u.allPersonProperties,a=u.allGroupProperties,n==null&&(n=!1);const h=await((l=this.featureFlagsPoller)==null?void 0:l.getAllFlagsAndPayloads(t,r,o,a));let p={},m={},f=!0;if(h&&(p=h.response,m=h.payloads,f=h.fallbackToDecide),f&&!n){const i=await super.getFeatureFlagsAndPayloadsStateless(t,r,o,a,s);p={...p,...i.flags||{}},m={...m,...i.payloads||{}}}return{featureFlags:p,featureFlagPayloads:m}}groupIdentify({groupType:t,groupKey:e,properties:r,distinctId:s,disableGeoip:n}){super.groupIdentifyStateless(t,e,r,{disableGeoip:n},s)}async reloadFeatureFlags(){var t;await((t=this.featureFlagsPoller)==null?void 0:t.loadFeatureFlags(!0))}async shutdown(t){var e;return(e=this.featureFlagsPoller)==null||e.stopPoller(),super.shutdown(t)}addLocalPersonAndGroupProperties(t,e,r,s){const n={distinct_id:t,...r||{}},o={};if(e)for(const a of Object.keys(e))o[a]={$group_key:e[a],...(s==null?void 0:s[a])||{}};return{allPersonProperties:n,allGroupProperties:o}}}const be="phc_LecQvgC7jUQ4GKugFV9Qs1Yf95bFvdDUdVWG9fmpCuY";let $=null,E=null;async function Fe(){function g(t){let e="";const r="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";for(let s=0;s<t;s+=1)e+=r.charAt(Math.floor(Math.random()*r.length));return e}if(!E){const t=await chrome.storage.local.get("clientID");t.clientID?E=t.clientID:(E=g(8),await chrome.storage.local.set({clientID:E}))}}async function Z(g,t){$||($=new _e(be,{disableGeoip:!1})),E||await Fe(),$.capture({distinctId:E,event:g,properties:t}),console.log("[PH]",g,t)}const Se={hotkey:!1,summaryIcon:!1,copyFormat:"plain-text",promptLanguage:"en",promptTemplate:`You are provided the title and transcript of a Youtube video in triple quotes.
+Summarize the video transcript in 5 bullet points in {{Language}}.
+Title: """{{Title}}"""
+Transcript: """{{Text}}"""`,defaultModel:"gpt",gptVersion:"gpt-4o-mini",geminiVersion:"standard",temporaryChat:!1};async function xe(){console.log("init"),chrome.runtime.setUninstallURL("https://dictanote.co/youtube-summary/feedback/");try{const{settings:g}=await chrome.storage.local.get({settings:Se});await chrome.storage.local.set({settings:g})}catch(g){console.error("Error initializing settings:",g)}}chrome.runtime.onInstalled.addListener(Pe),chrome.runtime.onMessage.addListener(Ce),chrome.runtime.onMessageExternal.addListener(Ae),chrome.action.onClicked.addListener(()=>{ee()});function ee(){chrome.runtime.openOptionsPage()}function Ae(g,t,e){g&&g.message&&g.message==="version"&&e({version:1})}async function Pe(g){if(console.log("onInstalled"),g.reason==chrome.runtime.OnInstalledReason.INSTALL){chrome.tabs.create({url:"https://dictanote.co/youtube-summary/getting-started/"}),Z("install",{version:chrome.runtime.getManifest().version});return}}function Ce(g,t){console.log("Background",g,t),g.id=="open-settings"?ee():g.id=="track"&&Z(g.category,g.info)}xe()})();
